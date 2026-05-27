@@ -1,112 +1,134 @@
 import streamlit as st
-import ccxt
 import pandas as pd
+import ccxt
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from ta.trend import EMAIndicator
+from ta.momentum import RSIIndicator
+from datetime import datetime
 
-# ==================================================
-# 기본 설정
-# ==================================================
+# =========================
+# 페이지 설정
+# =========================
+
 st.set_page_config(
-    page_title="TTF Crypto Intelligence",
+    page_title="TTF Crypto",
     layout="wide"
 )
 
-# ==================================================
-# 스타일
-# ==================================================
+# =========================
+# 모바일 UI CSS
+# =========================
+
 st.markdown("""
 <style>
 
-.stApp {
-    background-color: #f4f7fb;
+html, body, [class*="css"] {
+    background-color: #0E1117;
+    color: white;
+    font-family: sans-serif;
 }
 
-h1,h2,h3,h4 {
-    color: #111827;
+.block-container {
+    padding-top: 1rem;
+    padding-left: 0.8rem;
+    padding-right: 0.8rem;
+    padding-bottom: 1rem;
+}
+
+.title {
+    text-align: center;
+    font-size: 30px;
+    font-weight: bold;
+    color: #00FFAA;
+    margin-bottom: 20px;
 }
 
 .card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 15px;
+    background-color: #1B1F2A;
+    padding: 18px;
+    border-radius: 18px;
     margin-bottom: 15px;
-    box-shadow: 0px 3px 8px rgba(0,0,0,0.08);
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.4);
 }
 
-.green {
-    color: #16a34a;
+.section {
+    font-size: 20px;
     font-weight: bold;
+    margin-bottom: 10px;
 }
 
-.red {
-    color: #dc2626;
-    font-weight: bold;
-}
-
-.yellow {
-    color: #ca8a04;
-    font-weight: bold;
-}
-
-.signal-long {
-    background-color: #dcfce7;
-    color: #166534;
-    padding: 15px;
-    border-radius: 15px;
-    text-align: center;
+.long {
+    color: #00FF88;
     font-size: 24px;
     font-weight: bold;
 }
 
-.signal-short {
-    background-color: #fee2e2;
-    color: #991b1b;
-    padding: 15px;
-    border-radius: 15px;
-    text-align: center;
+.short {
+    color: #FF4B4B;
     font-size: 24px;
     font-weight: bold;
 }
 
-.signal-wait {
-    background-color: #fef9c3;
-    color: #854d0e;
-    padding: 15px;
-    border-radius: 15px;
-    text-align: center;
+.neutral {
+    color: #AAAAAA;
     font-size: 24px;
     font-weight: bold;
+}
+
+.info {
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+@media (max-width: 768px) {
+
+    .title {
+        font-size: 22px;
+    }
+
+    .section {
+        font-size: 18px;
+    }
+
+    .info {
+        font-size: 14px;
+    }
+
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# ==================================================
+# =========================
 # 제목
-# ==================================================
-st.title("TTF 암호화폐 분석 시스템")
+# =========================
 
-# ==================================================
-# 거래소
-# ==================================================
-exchange = ccxt.binanceus()
-
-symbols = {
-    "BTC": "BTC/USDT",
-    "ETH": "ETH/USDT",
-    "XRP": "XRP/USDT"
-}
-
-coin = st.selectbox(
-    "코인 선택",
-    list(symbols.keys())
+st.markdown(
+    '<div class="title">📈 TTF Crypto Intelligence</div>',
+    unsafe_allow_html=True
 )
 
-symbol = symbols[coin]
+# =========================
+# 거래소
+# =========================
 
-# ==================================================
-# 데이터 가져오기 함수
-# ==================================================
+exchange = ccxt.binanceus()
+
+# =========================
+# 코인 선택
+# =========================
+
+symbol = st.radio(
+    "코인 선택",
+    ["BTC/USDT", "ETH/USDT", "XRP/USDT"],
+    horizontal=True
+)
+
+# =========================
+# 데이터 가져오기
+# =========================
+
 def get_data(timeframe):
 
     ohlcv = exchange.fetch_ohlcv(
@@ -118,224 +140,313 @@ def get_data(timeframe):
     df = pd.DataFrame(
         ohlcv,
         columns=[
-            "time",
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume"
+            'timestamp',
+            'open',
+            'high',
+            'low',
+            'close',
+            'volume'
         ]
     )
 
-    df["ema20"] = df["close"].ewm(span=20).mean()
-    df["ema50"] = df["close"].ewm(span=50).mean()
-
-    delta = df["close"].diff()
-
-    gain = delta.clip(lower=0).rolling(14).mean()
-    loss = -delta.clip(upper=0).rolling(14).mean()
-
-    rs = gain / loss
-
-    df["rsi"] = 100 - (100 / (1 + rs))
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
 
     return df
 
-# ==================================================
-# 추세 분석
-# ==================================================
-def trend_analysis(df):
+# =========================
+# 지표 계산
+# =========================
 
-    latest = df.iloc[-1]
+def calculate(df):
 
-    ema20 = latest["ema20"]
-    ema50 = latest["ema50"]
-    rsi = latest["rsi"]
+    ema20 = EMAIndicator(close=df['close'], window=20)
+    ema50 = EMAIndicator(close=df['close'], window=50)
 
-    score = 0
+    rsi = RSIIndicator(close=df['close'], window=14)
 
-    if ema20 > ema50:
-        score += 1
+    df['ema20'] = ema20.ema_indicator()
+    df['ema50'] = ema50.ema_indicator()
+
+    df['rsi'] = rsi.rsi()
+
+    return df
+
+# =========================
+# 추세 판단
+# =========================
+
+def get_trend(df):
+
+    price = df['close'].iloc[-1]
+    ema20 = df['ema20'].iloc[-1]
+    ema50 = df['ema50'].iloc[-1]
+
+    if price > ema20 > ema50:
+        return "LONG"
+
+    elif price < ema20 < ema50:
+        return "SHORT"
+
     else:
-        score -= 1
+        return "NEUTRAL"
 
-    if rsi > 55:
-        score += 1
-    elif rsi < 45:
-        score -= 1
+# =========================
+# 다이버전스
+# =========================
 
-    if score >= 2:
-        return "상승", "green"
-
-    elif score <= -2:
-        return "하락", "red"
-
-    else:
-        return "횡보", "yellow"
-
-# ==================================================
-# 다이버전스 감지
-# ==================================================
 def detect_divergence(df):
 
-    recent_price = df["close"].iloc[-5:]
-    recent_rsi = df["rsi"].iloc[-5:]
+    recent_price = df['close'].iloc[-5:]
+    recent_rsi = df['rsi'].iloc[-5:]
 
-    price_high = recent_price.iloc[-1] > recent_price.max()
-
-    rsi_lower = recent_rsi.iloc[-1] < recent_rsi.max()
-
-    price_low = recent_price.iloc[-1] < recent_price.min()
-
-    rsi_higher = recent_rsi.iloc[-1] > recent_rsi.min()
-
-    if price_high and rsi_lower:
-        return "Bearish Divergence"
-
-    elif price_low and rsi_higher:
+    if recent_price.iloc[-1] < recent_price.iloc[0] and recent_rsi.iloc[-1] > recent_rsi.iloc[0]:
         return "Bullish Divergence"
 
+    elif recent_price.iloc[-1] > recent_price.iloc[0] and recent_rsi.iloc[-1] < recent_rsi.iloc[0]:
+        return "Bearish Divergence"
+
     else:
-        return "없음"
+        return "No Divergence"
 
-# ==================================================
-# 데이터
-# ==================================================
-df_15m = get_data("15m")
-df_1h = get_data("1h")
-df_4h = get_data("4h")
-df_1d = get_data("1d")
+# =========================
+# 데이터 로드
+# =========================
 
-# ==================================================
-# 추세
-# ==================================================
-trend_15m, color_15m = trend_analysis(df_15m)
-trend_1h, color_1h = trend_analysis(df_1h)
-trend_4h, color_4h = trend_analysis(df_4h)
+df_15m = calculate(get_data("15m"))
+df_1h = calculate(get_data("1h"))
+df_4h = calculate(get_data("4h"))
+df_1d = calculate(get_data("1d"))
 
-# ==================================================
+# =========================
+# 추세 분석
+# =========================
+
+trend_15m = get_trend(df_15m)
+trend_1h = get_trend(df_1h)
+trend_4h = get_trend(df_4h)
+
+# =========================
+# 메인 방향성
+# =========================
+
+if trend_4h == trend_1h:
+    final_signal = trend_4h
+else:
+    final_signal = "NEUTRAL"
+
+# =========================
+# 진입 손절 익절
+# =========================
+
+current_price = round(df_15m['close'].iloc[-1], 2)
+
+if final_signal == "LONG":
+
+    entry = current_price
+    stop = round(entry * 0.98, 2)
+    target = round(entry * 1.04, 2)
+
+    rr = round(
+        (target - entry) / (entry - stop),
+        2
+    )
+
+    probability = "HIGH"
+
+elif final_signal == "SHORT":
+
+    entry = current_price
+    stop = round(entry * 1.02, 2)
+    target = round(entry * 0.96, 2)
+
+    rr = round(
+        (entry - target) / (stop - entry),
+        2
+    )
+
+    probability = "HIGH"
+
+else:
+
+    entry = "-"
+    stop = "-"
+    target = "-"
+    rr = "-"
+    probability = "LOW"
+
+# =========================
 # 다이버전스
-# ==================================================
+# =========================
+
 div_15m = detect_divergence(df_15m)
 div_1h = detect_divergence(df_1h)
 div_4h = detect_divergence(df_4h)
 div_1d = detect_divergence(df_1d)
 
-# ==================================================
-# 현재 가격
-# ==================================================
-price = df_15m["close"].iloc[-1]
+# =========================
+# 시그널 색상
+# =========================
 
-# ==================================================
-# 전략 판단
-# ==================================================
-if trend_4h == "상승" and trend_1h == "상승":
+if final_signal == "LONG":
+    signal_class = "long"
 
-    signal = "LONG"
-
-    signal_class = "signal-long"
-
-    entry = price
-    stop = price * 0.97
-    target = price * 1.06
-
-elif trend_4h == "하락" and trend_1h == "하락":
-
-    signal = "SHORT"
-
-    signal_class = "signal-short"
-
-    entry = price
-    stop = price * 1.03
-    target = price * 0.94
+elif final_signal == "SHORT":
+    signal_class = "short"
 
 else:
+    signal_class = "neutral"
 
-    signal = "WAIT"
+# =========================
+# 메인 카드
+# =========================
 
-    signal_class = "signal-wait"
-
-    entry = price
-    stop = price * 0.98
-    target = price * 1.02
-
-# ==================================================
-# 손익비
-# ==================================================
-rr = abs(target - entry) / abs(entry - stop)
-
-# ==================================================
-# 상단 카드
-# ==================================================
-col1, col2, col3 = st.columns(3)
-
-with col1:
-
-    st.markdown(f"""
-    <div class='card'>
-    <h3>현재 가격</h3>
-    <h2>{price:.2f}</h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-
-    st.markdown(f"""
-    <div class='card'>
-    <h3>4H 방향</h3>
-    <h2 class='{color_4h}'>{trend_4h}</h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-
-    st.markdown(f"""
-    <div class='card'>
-    <h3>1H 상태</h3>
-    <h2 class='{color_1h}'>{trend_1h}</h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ==================================================
-# 시그널
-# ==================================================
 st.markdown(f"""
-<div class='{signal_class}'>
-{signal} SIGNAL
+<div class="card">
+
+<div class="{signal_class}">
+{final_signal}
+</div>
+
+<div class="info">
+💰 현재가: {current_price}
+</div>
+
+<div class="info">
+🎯 진입가: {entry}
+</div>
+
+<div class="info">
+🛑 손절가: {stop}
+</div>
+
+<div class="info">
+🚀 목표가: {target}
+</div>
+
+<div class="info">
+⚖ 손익비: {rr}
+</div>
+
+<div class="info">
+📊 확률: {probability}
+</div>
+
 </div>
 """, unsafe_allow_html=True)
 
-# ==================================================
+# =========================
+# 타임프레임 분석
+# =========================
+
+st.markdown("""
+<div class="card">
+<div class="section">
+📡 멀티 타임프레임 분석
+</div>
+""", unsafe_allow_html=True)
+
+st.write(f"15분봉: {trend_15m}")
+st.write(f"1시간봉: {trend_1h}")
+st.write(f"4시간봉: {trend_4h}")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================
+# 다이버전스 카드
+# =========================
+
+st.markdown("""
+<div class="card">
+<div class="section">
+⚠ RSI 다이버전스
+</div>
+""", unsafe_allow_html=True)
+
+st.write(f"15분봉: {div_15m}")
+st.write(f"1시간봉: {div_1h}")
+st.write(f"4시간봉: {div_4h}")
+st.write(f"일봉: {div_1d}")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================
 # 차트
-# ==================================================
-st.subheader("15분봉 캔들차트")
+# =========================
 
-fig = go.Figure()
+fig = make_subplots(
+    rows=3,
+    cols=1,
+    shared_xaxes=True,
+    vertical_spacing=0.03,
+    row_heights=[0.6, 0.2, 0.2]
+)
 
-fig.add_trace(go.Candlestick(
-    x=df_15m.index,
-    open=df_15m["open"],
-    high=df_15m["high"],
-    low=df_15m["low"],
-    close=df_15m["close"],
-    name="Price"
-))
+# 캔들
 
-fig.add_trace(go.Scatter(
-    x=df_15m.index,
-    y=df_15m["ema20"],
-    name="EMA20"
-))
+fig.add_trace(
+    go.Candlestick(
+        x=df_15m['timestamp'],
+        open=df_15m['open'],
+        high=df_15m['high'],
+        low=df_15m['low'],
+        close=df_15m['close'],
+        name='Price'
+    ),
+    row=1,
+    col=1
+)
 
-fig.add_trace(go.Scatter(
-    x=df_15m.index,
-    y=df_15m["ema50"],
-    name="EMA50"
-))
+# EMA20
+
+fig.add_trace(
+    go.Scatter(
+        x=df_15m['timestamp'],
+        y=df_15m['ema20'],
+        name='EMA20'
+    ),
+    row=1,
+    col=1
+)
+
+# EMA50
+
+fig.add_trace(
+    go.Scatter(
+        x=df_15m['timestamp'],
+        y=df_15m['ema50'],
+        name='EMA50'
+    ),
+    row=1,
+    col=1
+)
+
+# 거래량
+
+fig.add_trace(
+    go.Bar(
+        x=df_15m['timestamp'],
+        y=df_15m['volume'],
+        name='Volume'
+    ),
+    row=2,
+    col=1
+)
+
+# RSI
+
+fig.add_trace(
+    go.Scatter(
+        x=df_15m['timestamp'],
+        y=df_15m['rsi'],
+        name='RSI'
+    ),
+    row=3,
+    col=1
+)
 
 fig.update_layout(
-    template="plotly_white",
-    height=600,
+    template="plotly_dark",
+    height=700,
     xaxis_rangeslider_visible=False
 )
 
@@ -344,104 +455,10 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# ==================================================
-# 다이버전스
-# ==================================================
-st.subheader("다이버전스 현황")
-
-st.write("Daily :", div_1d)
-st.write("4H :", div_4h)
-st.write("1H :", div_1h)
-st.write("15M :", div_15m)
-
-# ==================================================
-# 전략
-# ==================================================
-st.subheader("매매 전략")
-
-col4, col5 = st.columns(2)
-
-with col4:
-
-    st.markdown(f"""
-    <div class='card'>
-    <h3>진입가</h3>
-    <p>{entry:.2f}</p>
-
-    <h3>손절가</h3>
-    <p>{stop:.2f}</p>
-
-    <h3>익절가</h3>
-    <p>{target:.2f}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col5:
-
-    st.markdown(f"""
-    <div class='card'>
-    <h3>손익비</h3>
-    <p>{rr:.2f}</p>
-
-    <h3>15M 추세</h3>
-    <p>{trend_15m}</p>
-
-    <h3>1H 추세</h3>
-    <p>{trend_1h}</p>
-
-    <h3>4H 추세</h3>
-    <p>{trend_4h}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ==================================================
-# RSI
-# ==================================================
-st.subheader("RSI")
-
-st.line_chart(
-    df_15m["rsi"]
-)
-
-# ==================================================
-# 거래량
-# ==================================================
-st.subheader("거래량")
-
-st.bar_chart(
-    df_15m["volume"]
-)
-
-# ==================================================
-# AI 코멘트
-# ==================================================
-st.subheader("AI 시장 코멘트")
-
-comments = []
-
-if trend_4h == "상승":
-    comments.append(
-        "4시간봉 기준 상승 우세입니다."
-    )
-
-if trend_4h == "하락":
-    comments.append(
-        "4시간봉 기준 하락 우세입니다."
-    )
-
-if div_1h != "없음":
-    comments.append(
-        f"1시간봉에서 {div_1h} 감지."
-    )
-
-if div_15m != "없음":
-    comments.append(
-        f"15분봉에서 {div_15m} 감지."
-    )
-
-for c in comments:
-    st.write("-", c)
+# =========================
+# 마지막 업데이트
+# =========================
 
 st.caption(
-    "TTF Crypto Intelligence V6"
+    f"Last Update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 )

@@ -17,19 +17,19 @@ st.set_page_config(
 )
 
 # =========================================
-# CSS (모바일 + 가독성 최적화)
+# CSS (모바일 + 가독성 강화)
 # =========================================
 
 st.markdown("""
 <style>
 
-/* 전체 */
-html, body, [class*="css"]  {
+/* 전체 배경 */
+html, body, [class*="css"] {
     background-color: #0F172A;
     color: #FFFFFF !important;
 }
 
-/* 전체 여백 */
+/* 메인 컨테이너 */
 .block-container {
     padding-top: 1rem;
     padding-left: 1rem;
@@ -37,12 +37,12 @@ html, body, [class*="css"]  {
     padding-bottom: 2rem;
 }
 
-/* 모든 글씨 */
+/* 전체 글씨 */
 p, span, div, label {
     color: #FFFFFF !important;
 }
 
-/* 메인 타이틀 */
+/* 제목 */
 .main-title {
     font-size: 34px;
     font-weight: bold;
@@ -111,11 +111,32 @@ p, span, div, label {
     color: #FFFFFF !important;
 }
 
-/* 라디오 버튼 */
-.stRadio label {
-    color: white !important;
+/* 라디오 버튼 전체 */
+div[role="radiogroup"] label {
+
+    background-color: #1E293B !important;
+
+    color: #FFFFFF !important;
+
+    padding: 10px 18px !important;
+
+    border-radius: 12px !important;
+
+    border: 1px solid #475569 !important;
+
+    margin-right: 10px !important;
+
     font-size: 18px !important;
+
     font-weight: bold !important;
+
+}
+
+/* 선택된 버튼 */
+div[role="radiogroup"] label[data-baseweb="radio"] input:checked + div {
+
+    color: #00FF99 !important;
+
 }
 
 /* 모바일 */
@@ -598,7 +619,7 @@ fig.update_layout(
     )
 )
 
-# 격자 밝기
+# 격자
 
 fig.update_xaxes(
     gridcolor="#374151"

@@ -17,19 +17,19 @@ st.set_page_config(
 )
 
 # =========================================
-# CSS (가독성 최우선)
+# CSS (모바일 + 가독성 최적화)
 # =========================================
 
 st.markdown("""
 <style>
 
-/* 전체 배경 */
-html, body, [class*="css"] {
+/* 전체 */
+html, body, [class*="css"]  {
     background-color: #0F172A;
     color: #FFFFFF !important;
 }
 
-/* 전체 컨테이너 */
+/* 전체 여백 */
 .block-container {
     padding-top: 1rem;
     padding-left: 1rem;
@@ -37,17 +37,17 @@ html, body, [class*="css"] {
     padding-bottom: 2rem;
 }
 
-/* 모든 일반 텍스트 강제 흰색 */
+/* 모든 글씨 */
 p, span, div, label {
     color: #FFFFFF !important;
 }
 
-/* 제목 */
+/* 메인 타이틀 */
 .main-title {
     font-size: 34px;
     font-weight: bold;
     text-align: center;
-    color: #00E5A8 !important;
+    color: #00F5B4 !important;
     margin-bottom: 25px;
 }
 
@@ -64,35 +64,35 @@ p, span, div, label {
 .card-title {
     font-size: 22px;
     font-weight: bold;
-    color: #FFFFFF !important;
     margin-bottom: 15px;
+    color: #FFFFFF !important;
 }
 
 /* LONG */
 .long {
+    color: #00FF99 !important;
     font-size: 34px;
     font-weight: bold;
-    color: #22FF88 !important;
     margin-bottom: 15px;
 }
 
 /* SHORT */
 .short {
+    color: #FF5C5C !important;
     font-size: 34px;
     font-weight: bold;
-    color: #FF5C5C !important;
     margin-bottom: 15px;
 }
 
 /* NEUTRAL */
 .neutral {
+    color: #FFD54A !important;
     font-size: 34px;
     font-weight: bold;
-    color: #FFD54A !important;
     margin-bottom: 15px;
 }
 
-/* 정보 텍스트 */
+/* 정보 */
 .info {
     font-size: 19px;
     font-weight: 600;
@@ -100,18 +100,18 @@ p, span, div, label {
     margin-top: 10px;
 }
 
-/* 다이버전스 박스 */
+/* 박스 */
 .div-box {
     background-color: #334155;
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 14px;
     margin-top: 10px;
     font-size: 17px;
-    font-weight: 600;
+    font-weight: bold;
     color: #FFFFFF !important;
 }
 
-/* 라디오 버튼 글씨 */
+/* 라디오 버튼 */
 .stRadio label {
     color: white !important;
     font-size: 18px !important;
@@ -249,7 +249,7 @@ def get_trend(df):
         return "NEUTRAL"
 
 # =========================================
-# 다이버전스
+# 다이버전스 감지
 # =========================================
 
 def detect_divergence(df):
@@ -287,7 +287,7 @@ df_4h = calculate(get_data("4h"))
 df_1d = calculate(get_data("1d"))
 
 # =========================================
-# 추세
+# 추세 계산
 # =========================================
 
 trend_15m = get_trend(df_15m)
@@ -299,8 +299,11 @@ trend_4h = get_trend(df_4h)
 # =========================================
 
 if trend_4h == trend_1h:
+
     final_signal = trend_4h
+
 else:
+
     final_signal = "NEUTRAL"
 
 # =========================================
@@ -313,7 +316,7 @@ current_price = round(
 )
 
 # =========================================
-# 진입/손절/익절
+# 진입 / 손절 / 익절
 # =========================================
 
 if final_signal == "LONG":
@@ -323,7 +326,8 @@ if final_signal == "LONG":
     target = round(entry * 1.04, 2)
 
     rr = round(
-        (target - entry) /
+        (target - entry)
+        /
         (entry - stop),
         2
     )
@@ -337,7 +341,8 @@ elif final_signal == "SHORT":
     target = round(entry * 0.96, 2)
 
     rr = round(
-        (entry - target) /
+        (entry - target)
+        /
         (stop - entry),
         2
     )
@@ -409,25 +414,39 @@ st.markdown(f"""
 
 st.markdown("""
 <div class="card">
+
 <div class="card-title">
 📡 멀티 타임프레임 분석
 </div>
+
 """, unsafe_allow_html=True)
 
-st.markdown(
-    f'<div class="info">15분봉 : {trend_15m}</div>',
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+<div class="div-box">
+📍 15분봉 :
+<span style="color:#FFFFFF;font-weight:bold;">
+{trend_15m}
+</span>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown(
-    f'<div class="info">1시간봉 : {trend_1h}</div>',
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+<div class="div-box">
+📍 1시간봉 :
+<span style="color:#FFFFFF;font-weight:bold;">
+{trend_1h}
+</span>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown(
-    f'<div class="info">4시간봉 : {trend_4h}</div>',
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+<div class="div-box">
+📍 4시간봉 :
+<span style="color:#FFFFFF;font-weight:bold;">
+{trend_4h}
+</span>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -437,9 +456,11 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("""
 <div class="card">
+
 <div class="card-title">
 ⚠ RSI 다이버전스
 </div>
+
 """, unsafe_allow_html=True)
 
 st.markdown(
@@ -465,7 +486,7 @@ st.markdown(
 st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================================
-# 차트
+# 차트 생성
 # =========================================
 
 fig = make_subplots(
@@ -476,7 +497,9 @@ fig = make_subplots(
     row_heights=[0.6, 0.2, 0.2]
 )
 
-# 캔들
+# =========================================
+# 캔들 차트
+# =========================================
 
 fig.add_trace(
     go.Candlestick(
@@ -491,67 +514,103 @@ fig.add_trace(
     col=1
 )
 
+# =========================================
 # EMA20
+# =========================================
 
 fig.add_trace(
     go.Scatter(
         x=df_15m["timestamp"],
         y=df_15m["ema20"],
-        name="EMA20"
+        name="EMA20",
+        line=dict(color="#00E5FF", width=2)
     ),
     row=1,
     col=1
 )
 
+# =========================================
 # EMA50
+# =========================================
 
 fig.add_trace(
     go.Scatter(
         x=df_15m["timestamp"],
         y=df_15m["ema50"],
-        name="EMA50"
+        name="EMA50",
+        line=dict(color="#FFD54A", width=2)
     ),
     row=1,
     col=1
 )
 
+# =========================================
 # 거래량
+# =========================================
 
 fig.add_trace(
     go.Bar(
         x=df_15m["timestamp"],
         y=df_15m["volume"],
-        name="Volume"
+        name="Volume",
+        marker_color="#00E5FF"
     ),
     row=2,
     col=1
 )
 
+# =========================================
 # RSI
+# =========================================
 
 fig.add_trace(
     go.Scatter(
         x=df_15m["timestamp"],
         y=df_15m["rsi"],
-        name="RSI"
+        name="RSI",
+        line=dict(color="#00FF99", width=2)
     ),
     row=3,
     col=1
 )
 
+# =========================================
 # 차트 레이아웃
+# =========================================
 
 fig.update_layout(
     template="plotly_dark",
     height=750,
     xaxis_rangeslider_visible=False,
+
+    paper_bgcolor="#0F172A",
+    plot_bgcolor="#111827",
+
     font=dict(
         size=15,
         color="white"
     ),
-    paper_bgcolor="#0F172A",
-    plot_bgcolor="#0F172A"
+
+    legend=dict(
+        font=dict(
+            color="white"
+        )
+    )
 )
+
+# 격자 밝기
+
+fig.update_xaxes(
+    gridcolor="#374151"
+)
+
+fig.update_yaxes(
+    gridcolor="#374151"
+)
+
+# =========================================
+# 차트 출력
+# =========================================
 
 st.plotly_chart(
     fig,

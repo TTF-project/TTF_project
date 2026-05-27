@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # =========================
-# 모바일 UI CSS
+# 모바일 최적화 CSS
 # =========================
 
 st.markdown("""
@@ -25,74 +25,99 @@ st.markdown("""
 
 html, body, [class*="css"] {
     background-color: #0E1117;
-    color: white;
+    color: #FFFFFF;
     font-family: sans-serif;
 }
 
+/* 전체 여백 */
 .block-container {
     padding-top: 1rem;
+    padding-bottom: 1rem;
     padding-left: 0.8rem;
     padding-right: 0.8rem;
-    padding-bottom: 1rem;
 }
 
-.title {
-    text-align: center;
-    font-size: 30px;
+/* 제목 */
+.main-title {
+    font-size: 34px;
     font-weight: bold;
+    text-align: center;
     color: #00FFAA;
     margin-bottom: 20px;
 }
 
+/* 카드 */
 .card {
     background-color: #1B1F2A;
-    padding: 18px;
-    border-radius: 18px;
+    padding: 20px;
+    border-radius: 20px;
     margin-bottom: 15px;
-    box-shadow: 0px 0px 10px rgba(0,0,0,0.4);
+    border: 1px solid #2A2F3A;
 }
 
-.section {
-    font-size: 20px;
+/* 섹션 */
+.section-title {
+    font-size: 22px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    color: white;
 }
 
+/* LONG */
 .long {
     color: #00FF88;
-    font-size: 24px;
+    font-size: 30px;
     font-weight: bold;
 }
 
+/* SHORT */
 .short {
     color: #FF4B4B;
-    font-size: 24px;
+    font-size: 30px;
     font-weight: bold;
 }
 
+/* NEUTRAL */
 .neutral {
     color: #AAAAAA;
-    font-size: 24px;
+    font-size: 30px;
     font-weight: bold;
 }
 
+/* 정보 텍스트 */
 .info {
-    font-size: 16px;
-    margin-top: 5px;
+    font-size: 18px;
+    color: #FFFFFF;
+    margin-top: 10px;
+    font-weight: 500;
 }
 
+/* 다이버전스 */
+.div-box {
+    background-color: #252A36;
+    padding: 12px;
+    border-radius: 12px;
+    margin-top: 8px;
+    font-size: 16px;
+}
+
+/* 모바일 */
 @media (max-width: 768px) {
 
-    .title {
-        font-size: 22px;
+    .main-title {
+        font-size: 24px;
     }
 
-    .section {
+    .section-title {
         font-size: 18px;
     }
 
     .info {
-        font-size: 14px;
+        font-size: 16px;
+    }
+
+    .long, .short, .neutral {
+        font-size: 24px;
     }
 
 }
@@ -105,7 +130,7 @@ html, body, [class*="css"] {
 # =========================
 
 st.markdown(
-    '<div class="title">📈 TTF Crypto Intelligence</div>',
+    '<div class="main-title">📈 TTF Crypto Intelligence</div>',
     unsafe_allow_html=True
 )
 
@@ -159,10 +184,20 @@ def get_data(timeframe):
 
 def calculate(df):
 
-    ema20 = EMAIndicator(close=df['close'], window=20)
-    ema50 = EMAIndicator(close=df['close'], window=50)
+    ema20 = EMAIndicator(
+        close=df['close'],
+        window=20
+    )
 
-    rsi = RSIIndicator(close=df['close'], window=14)
+    ema50 = EMAIndicator(
+        close=df['close'],
+        window=50
+    )
+
+    rsi = RSIIndicator(
+        close=df['close'],
+        window=14
+    )
 
     df['ema20'] = ema20.ema_indicator()
     df['ema50'] = ema50.ema_indicator()
@@ -172,7 +207,7 @@ def calculate(df):
     return df
 
 # =========================
-# 추세 판단
+# 추세 분석
 # =========================
 
 def get_trend(df):
@@ -199,14 +234,25 @@ def detect_divergence(df):
     recent_price = df['close'].iloc[-5:]
     recent_rsi = df['rsi'].iloc[-5:]
 
-    if recent_price.iloc[-1] < recent_price.iloc[0] and recent_rsi.iloc[-1] > recent_rsi.iloc[0]:
-        return "Bullish Divergence"
+    if (
+        recent_price.iloc[-1] < recent_price.iloc[0]
+        and
+        recent_rsi.iloc[-1] > recent_rsi.iloc[0]
+    ):
 
-    elif recent_price.iloc[-1] > recent_price.iloc[0] and recent_rsi.iloc[-1] < recent_rsi.iloc[0]:
-        return "Bearish Divergence"
+        return "🟢 Bullish Divergence"
+
+    elif (
+        recent_price.iloc[-1] > recent_price.iloc[0]
+        and
+        recent_rsi.iloc[-1] < recent_rsi.iloc[0]
+    ):
+
+        return "🔴 Bearish Divergence"
 
     else:
-        return "No Divergence"
+
+        return "⚪ 없음"
 
 # =========================
 # 데이터 로드
@@ -218,7 +264,7 @@ df_4h = calculate(get_data("4h"))
 df_1d = calculate(get_data("1d"))
 
 # =========================
-# 추세 분석
+# 추세
 # =========================
 
 trend_15m = get_trend(df_15m)
@@ -226,19 +272,29 @@ trend_1h = get_trend(df_1h)
 trend_4h = get_trend(df_4h)
 
 # =========================
-# 메인 방향성
+# 최종 시그널
 # =========================
 
 if trend_4h == trend_1h:
+
     final_signal = trend_4h
+
 else:
+
     final_signal = "NEUTRAL"
 
 # =========================
-# 진입 손절 익절
+# 현재가
 # =========================
 
-current_price = round(df_15m['close'].iloc[-1], 2)
+current_price = round(
+    df_15m['close'].iloc[-1],
+    2
+)
+
+# =========================
+# 진입 / 손절 / 목표
+# =========================
 
 if final_signal == "LONG":
 
@@ -247,11 +303,12 @@ if final_signal == "LONG":
     target = round(entry * 1.04, 2)
 
     rr = round(
-        (target - entry) / (entry - stop),
+        (target - entry) /
+        (entry - stop),
         2
     )
 
-    probability = "HIGH"
+    probability = "높음"
 
 elif final_signal == "SHORT":
 
@@ -260,11 +317,12 @@ elif final_signal == "SHORT":
     target = round(entry * 0.96, 2)
 
     rr = round(
-        (entry - target) / (stop - entry),
+        (entry - target) /
+        (stop - entry),
         2
     )
 
-    probability = "HIGH"
+    probability = "높음"
 
 else:
 
@@ -272,19 +330,10 @@ else:
     stop = "-"
     target = "-"
     rr = "-"
-    probability = "LOW"
+    probability = "낮음"
 
 # =========================
-# 다이버전스
-# =========================
-
-div_15m = detect_divergence(df_15m)
-div_1h = detect_divergence(df_1h)
-div_4h = detect_divergence(df_4h)
-div_1d = detect_divergence(df_1d)
-
-# =========================
-# 시그널 색상
+# 색상 클래스
 # =========================
 
 if final_signal == "LONG":
@@ -328,44 +377,72 @@ st.markdown(f"""
 </div>
 
 <div class="info">
-📊 확률: {probability}
+📊 전략 신뢰도: {probability}
 </div>
 
 </div>
 """, unsafe_allow_html=True)
 
 # =========================
-# 타임프레임 분석
+# 멀티 타임프레임
 # =========================
 
 st.markdown("""
 <div class="card">
-<div class="section">
-📡 멀티 타임프레임 분석
+
+<div class="section-title">
+📡 멀티 타임프레임
 </div>
 """, unsafe_allow_html=True)
 
-st.write(f"15분봉: {trend_15m}")
-st.write(f"1시간봉: {trend_1h}")
-st.write(f"4시간봉: {trend_4h}")
+st.markdown(
+    f'<div class="info">15분봉: {trend_15m}</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f'<div class="info">1시간봉: {trend_1h}</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f'<div class="info">4시간봉: {trend_4h}</div>',
+    unsafe_allow_html=True
+)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# 다이버전스 카드
+# 다이버전스
 # =========================
 
 st.markdown("""
 <div class="card">
-<div class="section">
+
+<div class="section-title">
 ⚠ RSI 다이버전스
 </div>
 """, unsafe_allow_html=True)
 
-st.write(f"15분봉: {div_15m}")
-st.write(f"1시간봉: {div_1h}")
-st.write(f"4시간봉: {div_4h}")
-st.write(f"일봉: {div_1d}")
+st.markdown(
+    f'<div class="div-box">15분봉: {detect_divergence(df_15m)}</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f'<div class="div-box">1시간봉: {detect_divergence(df_1h)}</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f'<div class="div-box">4시간봉: {detect_divergence(df_4h)}</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f'<div class="div-box">일봉: {detect_divergence(df_1d)}</div>',
+    unsafe_allow_html=True
+)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -446,8 +523,12 @@ fig.add_trace(
 
 fig.update_layout(
     template="plotly_dark",
-    height=700,
-    xaxis_rangeslider_visible=False
+    height=750,
+    xaxis_rangeslider_visible=False,
+    font=dict(
+        size=15,
+        color="white"
+    )
 )
 
 st.plotly_chart(
@@ -460,5 +541,5 @@ st.plotly_chart(
 # =========================
 
 st.caption(
-    f"Last Update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    f"마지막 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 )

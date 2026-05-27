@@ -89,7 +89,7 @@ st.title("TTF 암호화폐 분석 시스템")
 # ==================================================
 # 거래소
 # ==================================================
-exchange = ccxt.binance()
+exchange = ccxt.binanceus()
 
 symbols = {
     "BTC": "BTC/USDT",

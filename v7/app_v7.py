@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import ccxt
+import requests
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -158,6 +159,36 @@ st.markdown(
     '<div class="main-title">⚡ TTF V7 SCALPING</div>',
     unsafe_allow_html=True
 )
+
+# ==================================================
+# TELEGRAM
+# ==================================================
+
+def send_telegram(message):
+
+    try:
+
+        token = st.secrets["BOT_TOKEN"]
+        chat_id = st.secrets["CHAT_ID"]
+
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+        requests.post(
+            url,
+            data={
+                "chat_id": chat_id,
+                "text": message
+            },
+            timeout=10
+        )
+
+    except Exception:
+        pass
+
+
+if "last_signal" not in st.session_state:
+
+    st.session_state.last_signal = ""
 
 # ==================================================
 # EXCHANGE
@@ -482,6 +513,70 @@ else:
     tp1 = "-"
     tp2 = "-"
     tp3 = "-"
+
+# ==================================================
+# TELEGRAM ALERT
+# ==================================================
+
+if scalp_signal == "LONG":
+
+    signal_key = f"{symbol}_LONG"
+
+    if st.session_state.last_signal != signal_key:
+
+        send_telegram(
+            f"""
+🚀 LONG SIGNAL
+
+종목 : {symbol}
+
+진입가 : {entry}
+
+손절가 : {stop}
+
+TP1 : {tp1}
+
+TP2 : {tp2}
+
+TP3 : {tp3}
+
+신뢰도 : {confidence}/100
+"""
+        )
+
+        st.session_state.last_signal = signal_key
+
+elif scalp_signal == "SHORT":
+
+    signal_key = f"{symbol}_SHORT"
+
+    if st.session_state.last_signal != signal_key:
+
+        send_telegram(
+            f"""
+🔻 SHORT SIGNAL
+
+종목 : {symbol}
+
+진입가 : {entry}
+
+손절가 : {stop}
+
+TP1 : {tp1}
+
+TP2 : {tp2}
+
+TP3 : {tp3}
+
+신뢰도 : {confidence}/100
+"""
+        )
+
+        st.session_state.last_signal = signal_key
+
+else:
+
+    st.session_state.last_signal = ""
 
 # ==================================================
 # SIGNAL COLOR

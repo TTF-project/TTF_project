@@ -1,122 +1,129 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import ccxt
+
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
 from ta.trend import EMAIndicator
 from ta.momentum import RSIIndicator
+from ta.volatility import AverageTrueRange
+
 from datetime import datetime
 
-# =========================================
+# ======================================================
 # 페이지 설정
-# =========================================
+# ======================================================
 
 st.set_page_config(
-    page_title="TTF Crypto",
+    page_title="TTF V6 PRO FINAL",
     layout="wide"
 )
 
-# =========================================
-# CSS (모바일 + 가독성 강화)
-# =========================================
+# ======================================================
+# CSS
+# ======================================================
 
 st.markdown("""
 <style>
 
-/* 전체 배경 */
 html, body, [class*="css"] {
+
     background-color: #0F172A;
-    color: #FFFFFF !important;
-}
+    color: white !important;
 
-/* 메인 컨테이너 */
-.block-container {
-    padding-top: 1rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    padding-bottom: 2rem;
-}
-
-/* 전체 글씨 */
-p, span, div, label {
-    color: #FFFFFF !important;
 }
 
 /* 제목 */
+
 .main-title {
+
     font-size: 34px;
     font-weight: bold;
     text-align: center;
-    color: #00F5B4 !important;
-    margin-bottom: 25px;
+    color: #00FFB2;
+    margin-bottom: 20px;
+
 }
 
 /* 카드 */
+
 .card {
-    background-color: #1E293B;
+
+    background: #1E293B;
     border-radius: 20px;
-    padding: 22px;
-    margin-bottom: 18px;
+    padding: 20px;
+    margin-bottom: 20px;
     border: 1px solid #334155;
+
 }
 
 /* 카드 제목 */
+
 .card-title {
+
     font-size: 22px;
     font-weight: bold;
     margin-bottom: 15px;
-    color: #FFFFFF !important;
+
 }
 
-/* LONG */
+/* 신호 */
+
 .long {
-    color: #00FF99 !important;
+
+    color: #00FF99;
     font-size: 34px;
     font-weight: bold;
-    margin-bottom: 15px;
+
 }
 
-/* SHORT */
 .short {
-    color: #FF5C5C !important;
+
+    color: #FF5C5C;
     font-size: 34px;
     font-weight: bold;
-    margin-bottom: 15px;
+
 }
 
-/* NEUTRAL */
 .neutral {
-    color: #FFD54A !important;
+
+    color: #FFD54A;
     font-size: 34px;
     font-weight: bold;
-    margin-bottom: 15px;
+
 }
 
 /* 정보 */
+
 .info {
-    font-size: 19px;
+
+    font-size: 18px;
+    margin-top: 8px;
     font-weight: 600;
-    color: #FFFFFF !important;
-    margin-top: 10px;
+
 }
 
 /* 박스 */
-.div-box {
-    background-color: #334155;
-    border-radius: 14px;
+
+.box {
+
+    background: #334155;
     padding: 14px;
+    border-radius: 14px;
     margin-top: 10px;
-    font-size: 17px;
+    font-size: 16px;
     font-weight: bold;
-    color: #FFFFFF !important;
+
 }
 
-/* 라디오 버튼 전체 */
+/* 라디오 버튼 */
+
 div[role="radiogroup"] label {
 
     background-color: #1E293B !important;
-
-    color: #FFFFFF !important;
+    color: white !important;
 
     padding: 10px 18px !important;
 
@@ -132,34 +139,24 @@ div[role="radiogroup"] label {
 
 }
 
-/* 선택된 버튼 */
-div[role="radiogroup"] label[data-baseweb="radio"] input:checked + div {
-
-    color: #00FF99 !important;
-
-}
-
 /* 모바일 */
-@media (max-width: 768px) {
 
-    .main-title {
-        font-size: 26px;
+@media (max-width:768px){
+
+    .main-title{
+        font-size:26px;
     }
 
-    .card-title {
-        font-size: 18px;
+    .card-title{
+        font-size:18px;
     }
 
-    .info {
-        font-size: 16px;
+    .info{
+        font-size:15px;
     }
 
-    .long, .short, .neutral {
-        font-size: 28px;
-    }
-
-    .div-box {
-        font-size: 15px;
+    .box{
+        font-size:14px;
     }
 
 }
@@ -167,24 +164,24 @@ div[role="radiogroup"] label[data-baseweb="radio"] input:checked + div {
 </style>
 """, unsafe_allow_html=True)
 
-# =========================================
+# ======================================================
 # 제목
-# =========================================
+# ======================================================
 
 st.markdown(
-    '<div class="main-title">📈 TTF CRYPTO INTELLIGENCE</div>',
+    '<div class="main-title">🚀 TTF V6 PRO FINAL</div>',
     unsafe_allow_html=True
 )
 
-# =========================================
+# ======================================================
 # 거래소
-# =========================================
+# ======================================================
 
 exchange = ccxt.binanceus()
 
-# =========================================
+# ======================================================
 # 코인 선택
-# =========================================
+# ======================================================
 
 symbol = st.radio(
     "코인 선택",
@@ -192,9 +189,9 @@ symbol = st.radio(
     horizontal=True
 )
 
-# =========================================
+# ======================================================
 # 데이터 가져오기
-# =========================================
+# ======================================================
 
 def get_data(timeframe):
 
@@ -223,179 +220,309 @@ def get_data(timeframe):
 
     return df
 
-# =========================================
+# ======================================================
 # 지표 계산
-# =========================================
+# ======================================================
 
 def calculate(df):
 
-    ema20 = EMAIndicator(
+    df["ema20"] = EMAIndicator(
         close=df["close"],
         window=20
-    )
+    ).ema_indicator()
 
-    ema50 = EMAIndicator(
+    df["ema50"] = EMAIndicator(
         close=df["close"],
         window=50
-    )
+    ).ema_indicator()
 
-    rsi = RSIIndicator(
+    df["rsi"] = RSIIndicator(
+        close=df["close"],
+        window=14
+    ).rsi()
+
+    atr = AverageTrueRange(
+        high=df["high"],
+        low=df["low"],
         close=df["close"],
         window=14
     )
 
-    df["ema20"] = ema20.ema_indicator()
-    df["ema50"] = ema50.ema_indicator()
-    df["rsi"] = rsi.rsi()
+    df["atr"] = atr.average_true_range()
 
     return df
 
-# =========================================
-# 추세 분석
-# =========================================
+# ======================================================
+# 추세 판단
+# ======================================================
 
 def get_trend(df):
 
     price = df["close"].iloc[-1]
+
     ema20 = df["ema20"].iloc[-1]
     ema50 = df["ema50"].iloc[-1]
 
     if price > ema20 > ema50:
+
         return "LONG"
 
     elif price < ema20 < ema50:
+
         return "SHORT"
 
     else:
+
         return "NEUTRAL"
 
-# =========================================
-# 다이버전스 감지
-# =========================================
+# ======================================================
+# 횡보 필터
+# ======================================================
+
+def is_sideways(df):
+
+    ema_gap = abs(
+        df["ema20"].iloc[-1]
+        -
+        df["ema50"].iloc[-1]
+    )
+
+    price = df["close"].iloc[-1]
+
+    gap_percent = ema_gap / price * 100
+
+    if gap_percent < 0.3:
+
+        return True
+
+    return False
+
+# ======================================================
+# 거래량 강도
+# ======================================================
+
+def volume_strength(df):
+
+    current = df["volume"].iloc[-1]
+
+    avg = df["volume"].rolling(20).mean().iloc[-1]
+
+    if current > avg:
+
+        return "STRONG"
+
+    return "WEAK"
+
+# ======================================================
+# 추세 강도 점수
+# ======================================================
+
+def trend_score(df):
+
+    score = 0
+
+    price = df["close"].iloc[-1]
+
+    ema20 = df["ema20"].iloc[-1]
+    ema50 = df["ema50"].iloc[-1]
+
+    rsi = df["rsi"].iloc[-1]
+
+    if price > ema20:
+        score += 30
+
+    if ema20 > ema50:
+        score += 30
+
+    if rsi > 55:
+        score += 20
+
+    if volume_strength(df) == "STRONG":
+        score += 20
+
+    return score
+
+# ======================================================
+# RSI 다이버전스 감지
+# ======================================================
 
 def detect_divergence(df):
 
-    recent_price = df["close"].iloc[-5:]
-    recent_rsi = df["rsi"].iloc[-5:]
+    closes = df["close"]
+    rsi = df["rsi"]
 
-    if (
-        recent_price.iloc[-1] < recent_price.iloc[0]
-        and
-        recent_rsi.iloc[-1] > recent_rsi.iloc[0]
-    ):
+    p1 = closes.iloc[-5]
+    p2 = closes.iloc[-1]
 
-        return "🟢 Bullish Divergence"
+    r1 = rsi.iloc[-5]
+    r2 = rsi.iloc[-1]
 
-    elif (
-        recent_price.iloc[-1] > recent_price.iloc[0]
-        and
-        recent_rsi.iloc[-1] < recent_rsi.iloc[0]
-    ):
+    # Bullish Divergence
 
-        return "🔴 Bearish Divergence"
+    if p2 < p1 and r2 > r1:
+
+        return "BULLISH"
+
+    # Bearish Divergence
+
+    elif p2 > p1 and r2 < r1:
+
+        return "BEARISH"
 
     else:
 
-        return "⚪ 없음"
+        return "NONE"
 
-# =========================================
+# ======================================================
 # 데이터 로드
-# =========================================
+# ======================================================
 
 df_15m = calculate(get_data("15m"))
 df_1h = calculate(get_data("1h"))
 df_4h = calculate(get_data("4h"))
-df_1d = calculate(get_data("1d"))
 
-# =========================================
-# 추세 계산
-# =========================================
+# ======================================================
+# 다이버전스
+# ======================================================
+
+div_15m = detect_divergence(df_15m)
+div_1h = detect_divergence(df_1h)
+div_4h = detect_divergence(df_4h)
+
+# ======================================================
+# 추세
+# ======================================================
 
 trend_15m = get_trend(df_15m)
 trend_1h = get_trend(df_1h)
 trend_4h = get_trend(df_4h)
 
-# =========================================
-# 최종 시그널
-# =========================================
+# ======================================================
+# 횡보 여부
+# ======================================================
 
-if trend_4h == trend_1h:
+sideways = is_sideways(df_4h)
 
-    final_signal = trend_4h
+# ======================================================
+# 최종 신호
+# ======================================================
+
+if sideways:
+
+    final_signal = "NEUTRAL"
+
+elif trend_4h == "LONG" and trend_1h == "LONG":
+
+    final_signal = "LONG"
+
+elif trend_4h == "SHORT" and trend_1h == "SHORT":
+
+    final_signal = "SHORT"
 
 else:
 
     final_signal = "NEUTRAL"
 
-# =========================================
+# ======================================================
 # 현재가
-# =========================================
+# ======================================================
 
 current_price = round(
     df_15m["close"].iloc[-1],
     2
 )
 
-# =========================================
+# ======================================================
+# ATR
+# ======================================================
+
+atr = df_4h["atr"].iloc[-1]
+
+# ======================================================
 # 진입 / 손절 / 익절
-# =========================================
+# ======================================================
 
 if final_signal == "LONG":
 
     entry = current_price
-    stop = round(entry * 0.98, 2)
-    target = round(entry * 1.04, 2)
 
-    rr = round(
-        (target - entry)
-        /
-        (entry - stop),
+    stop = round(
+        entry - (atr * 1.5),
         2
     )
 
-    probability = "높음"
+    target = round(
+        entry + (atr * 3),
+        2
+    )
+
+    strategy = "공격적 LONG 전략"
 
 elif final_signal == "SHORT":
 
     entry = current_price
-    stop = round(entry * 1.02, 2)
-    target = round(entry * 0.96, 2)
 
-    rr = round(
-        (entry - target)
-        /
-        (stop - entry),
+    stop = round(
+        entry + (atr * 1.5),
         2
     )
 
-    probability = "높음"
+    target = round(
+        entry - (atr * 3),
+        2
+    )
+
+    strategy = "공격적 SHORT 전략"
 
 else:
 
     entry = "-"
     stop = "-"
     target = "-"
-    rr = "-"
-    probability = "낮음"
+    strategy = "관망 추천"
 
-# =========================================
-# 시그널 색상
-# =========================================
+# ======================================================
+# 추세 강도
+# ======================================================
+
+score = trend_score(df_4h)
+
+# ======================================================
+# 시장 상태
+# ======================================================
+
+market_status = "횡보장"
+
+if score >= 70:
+
+    market_status = "강한 추세장"
+
+elif score >= 40:
+
+    market_status = "중립 시장"
+
+# ======================================================
+# 신호 색상
+# ======================================================
 
 if final_signal == "LONG":
+
     signal_class = "long"
 
 elif final_signal == "SHORT":
+
     signal_class = "short"
 
 else:
+
     signal_class = "neutral"
 
-# =========================================
+# ======================================================
 # 메인 카드
-# =========================================
+# ======================================================
 
 st.markdown(f"""
+
 <div class="card">
 
 <div class="{signal_class}">
@@ -419,108 +546,78 @@ st.markdown(f"""
 </div>
 
 <div class="info">
-⚖ 손익비 : {rr}
+📈 추세 강도 : {score}/100
 </div>
 
 <div class="info">
-📊 전략 신뢰도 : {probability}
+🧠 전략 : {strategy}
 </div>
 
 </div>
+
 """, unsafe_allow_html=True)
 
-# =========================================
-# 멀티 타임프레임
-# =========================================
+# ======================================================
+# 시장 상태 카드
+# ======================================================
 
-st.markdown("""
+st.markdown(f"""
+
 <div class="card">
 
 <div class="card-title">
-📡 멀티 타임프레임 분석
+📊 시장 상태
+</div>
+
+<div class="box">
+시장 상태 : {market_status}
+</div>
+
+<div class="box">
+거래량 : {volume_strength(df_4h)}
+</div>
+
+<div class="box">
+4시간 추세 : {trend_4h}
+</div>
+
+<div class="box">
+1시간 추세 : {trend_1h}
+</div>
+
+<div class="box">
+15분 추세 : {trend_15m}
+</div>
+
+<div class="box">
+15분 다이버전스 : {div_15m}
+</div>
+
+<div class="box">
+1시간 다이버전스 : {div_1h}
+</div>
+
+<div class="box">
+4시간 다이버전스 : {div_4h}
+</div>
+
 </div>
 
 """, unsafe_allow_html=True)
 
-st.markdown(f"""
-<div class="div-box">
-📍 15분봉 :
-<span style="color:#FFFFFF;font-weight:bold;">
-{trend_15m}
-</span>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown(f"""
-<div class="div-box">
-📍 1시간봉 :
-<span style="color:#FFFFFF;font-weight:bold;">
-{trend_1h}
-</span>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown(f"""
-<div class="div-box">
-📍 4시간봉 :
-<span style="color:#FFFFFF;font-weight:bold;">
-{trend_4h}
-</span>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# =========================================
-# 다이버전스
-# =========================================
-
-st.markdown("""
-<div class="card">
-
-<div class="card-title">
-⚠ RSI 다이버전스
-</div>
-
-""", unsafe_allow_html=True)
-
-st.markdown(
-    f'<div class="div-box">15분봉 : {detect_divergence(df_15m)}</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    f'<div class="div-box">1시간봉 : {detect_divergence(df_1h)}</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    f'<div class="div-box">4시간봉 : {detect_divergence(df_4h)}</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    f'<div class="div-box">일봉 : {detect_divergence(df_1d)}</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# =========================================
-# 차트 생성
-# =========================================
+# ======================================================
+# 차트
+# ======================================================
 
 fig = make_subplots(
     rows=3,
     cols=1,
     shared_xaxes=True,
-    vertical_spacing=0.03,
-    row_heights=[0.6, 0.2, 0.2]
+    row_heights=[0.6,0.2,0.2],
+    vertical_spacing=0.03
 )
 
-# =========================================
-# 캔들 차트
-# =========================================
+# 캔들
 
 fig.add_trace(
     go.Candlestick(
@@ -529,97 +626,110 @@ fig.add_trace(
         high=df_15m["high"],
         low=df_15m["low"],
         close=df_15m["close"],
-        name="Price"
+        name="PRICE"
     ),
     row=1,
     col=1
 )
 
-# =========================================
 # EMA20
-# =========================================
 
 fig.add_trace(
     go.Scatter(
         x=df_15m["timestamp"],
         y=df_15m["ema20"],
-        name="EMA20",
-        line=dict(color="#00E5FF", width=2)
+        line=dict(
+            color="#00E5FF",
+            width=2
+        ),
+        name="EMA20"
     ),
     row=1,
     col=1
 )
 
-# =========================================
 # EMA50
-# =========================================
 
 fig.add_trace(
     go.Scatter(
         x=df_15m["timestamp"],
         y=df_15m["ema50"],
-        name="EMA50",
-        line=dict(color="#FFD54A", width=2)
+        line=dict(
+            color="#FFD54A",
+            width=2
+        ),
+        name="EMA50"
     ),
     row=1,
     col=1
 )
 
-# =========================================
 # 거래량
-# =========================================
 
 fig.add_trace(
     go.Bar(
         x=df_15m["timestamp"],
         y=df_15m["volume"],
-        name="Volume",
-        marker_color="#00E5FF"
+        marker_color="#00E5FF",
+        name="Volume"
     ),
     row=2,
     col=1
 )
 
-# =========================================
 # RSI
-# =========================================
 
 fig.add_trace(
     go.Scatter(
         x=df_15m["timestamp"],
         y=df_15m["rsi"],
-        name="RSI",
-        line=dict(color="#00FF99", width=2)
+        line=dict(
+            color="#00FF99",
+            width=2
+        ),
+        name="RSI"
     ),
     row=3,
     col=1
 )
 
-# =========================================
-# 차트 레이아웃
-# =========================================
+# RSI 기준선
+
+fig.add_hline(
+    y=70,
+    line_dash="dash",
+    line_color="red",
+    row=3,
+    col=1
+)
+
+fig.add_hline(
+    y=30,
+    line_dash="dash",
+    line_color="green",
+    row=3,
+    col=1
+)
+
+# 레이아웃
 
 fig.update_layout(
+
     template="plotly_dark",
-    height=750,
+
+    height=850,
+
     xaxis_rangeslider_visible=False,
 
     paper_bgcolor="#0F172A",
+
     plot_bgcolor="#111827",
 
     font=dict(
-        size=15,
-        color="white"
-    ),
-
-    legend=dict(
-        font=dict(
-            color="white"
-        )
+        color="white",
+        size=14
     )
 )
-
-# 격자
 
 fig.update_xaxes(
     gridcolor="#374151"
@@ -629,19 +739,19 @@ fig.update_yaxes(
     gridcolor="#374151"
 )
 
-# =========================================
-# 차트 출력
-# =========================================
+# ======================================================
+# 출력
+# ======================================================
 
 st.plotly_chart(
     fig,
     use_container_width=True
 )
 
-# =========================================
-# 마지막 업데이트
-# =========================================
+# ======================================================
+# 시간
+# ======================================================
 
 st.caption(
-    f"마지막 업데이트 : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    f"업데이트 : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 )

@@ -1,0 +1,749 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import ccxt
+
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from ta.trend import EMAIndicator
+from ta.momentum import RSIIndicator
+from ta.volatility import AverageTrueRange
+
+from datetime import datetime
+
+# ==================================================
+# PAGE CONFIG
+# ==================================================
+
+st.set_page_config(
+    page_title="TTF V7 SCALPING",
+    layout="wide"
+)
+
+# ==================================================
+# CSS
+# ==================================================
+
+st.markdown("""
+<style>
+
+html, body, [class*="css"] {
+
+    background-color:#0F172A;
+    color:white !important;
+
+}
+
+.main-title {
+
+    font-size:34px;
+    font-weight:bold;
+    text-align:center;
+
+    color:#00FFB2;
+
+    margin-bottom:20px;
+
+}
+
+.card {
+
+    background:#1E293B;
+
+    padding:20px;
+
+    border-radius:20px;
+
+    margin-bottom:20px;
+
+    border:1px solid #334155;
+
+}
+
+.card-title {
+
+    font-size:22px;
+
+    font-weight:bold;
+
+    margin-bottom:10px;
+
+}
+
+.long {
+
+    color:#00FF99;
+
+    font-size:34px;
+
+    font-weight:bold;
+
+}
+
+.short {
+
+    color:#FF5C5C;
+
+    font-size:34px;
+
+    font-weight:bold;
+
+}
+
+.neutral {
+
+    color:#FFD54A;
+
+    font-size:34px;
+
+    font-weight:bold;
+
+}
+
+.info {
+
+    font-size:18px;
+
+    font-weight:600;
+
+    margin-top:8px;
+
+}
+
+.box {
+
+    background:#334155;
+
+    padding:12px;
+
+    border-radius:12px;
+
+    margin-top:10px;
+
+    font-size:16px;
+
+    font-weight:bold;
+
+}
+
+@media (max-width:768px){
+
+    .main-title{
+        font-size:24px;
+    }
+
+    .card-title{
+        font-size:18px;
+    }
+
+    .info{
+        font-size:15px;
+    }
+
+    .box{
+        font-size:14px;
+    }
+
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ==================================================
+# TITLE
+# ==================================================
+
+st.markdown(
+    '<div class="main-title">⚡ TTF V7 SCALPING</div>',
+    unsafe_allow_html=True
+)
+
+# ==================================================
+# EXCHANGE
+# ==================================================
+
+exchange = ccxt.binanceus()
+
+# ==================================================
+# SYMBOL
+# ==================================================
+
+symbol = st.radio(
+    "코인 선택",
+    [
+        "BTC/USDT",
+        "ETH/USDT",
+        "XRP/USDT"
+    ],
+    horizontal=True
+)
+
+# ==================================================
+# DATA
+# ==================================================
+
+@st.cache_data(ttl=30)
+def get_data(timeframe):
+
+    ohlcv = exchange.fetch_ohlcv(
+        symbol,
+        timeframe=timeframe,
+        limit=300
+    )
+
+    df = pd.DataFrame(
+        ohlcv,
+        columns=[
+            "timestamp",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume"
+        ]
+    )
+
+    df["timestamp"] = pd.to_datetime(
+        df["timestamp"],
+        unit="ms"
+    )
+
+    return df
+
+# ==================================================
+# INDICATORS
+# ==================================================
+
+def calculate(df):
+
+    df["ema20"] = EMAIndicator(
+        close=df["close"],
+        window=20
+    ).ema_indicator()
+
+    df["ema50"] = EMAIndicator(
+        close=df["close"],
+        window=50
+    ).ema_indicator()
+
+    df["rsi"] = RSIIndicator(
+        close=df["close"],
+        window=14
+    ).rsi()
+
+    atr = AverageTrueRange(
+        high=df["high"],
+        low=df["low"],
+        close=df["close"],
+        window=14
+    )
+
+    df["atr"] = atr.average_true_range()
+
+    return df
+
+# ==================================================
+# TREND
+# ==================================================
+
+def get_trend(df):
+
+    price = df["close"].iloc[-1]
+
+    ema20 = df["ema20"].iloc[-1]
+
+    ema50 = df["ema50"].iloc[-1]
+
+    if price > ema20 > ema50:
+
+        return "LONG"
+
+    elif price < ema20 < ema50:
+
+        return "SHORT"
+
+    return "NEUTRAL"
+
+# ==================================================
+# VOLUME
+# ==================================================
+
+def volume_strength(df):
+
+    current = df["volume"].iloc[-1]
+
+    avg = df["volume"].rolling(20).mean().iloc[-1]
+
+    if current > avg:
+
+        return "STRONG"
+
+    return "WEAK"
+
+# ==================================================
+# DIVERGENCE
+# ==================================================
+
+def detect_divergence(df):
+
+    closes = df["close"]
+
+    rsi = df["rsi"]
+
+    p1 = closes.iloc[-5]
+    p2 = closes.iloc[-1]
+
+    r1 = rsi.iloc[-5]
+    r2 = rsi.iloc[-1]
+
+    if p2 < p1 and r2 > r1:
+
+        return "BULLISH"
+
+    elif p2 > p1 and r2 < r1:
+
+        return "BEARISH"
+
+    return "NONE"
+
+# ==================================================
+# LOAD DATA
+# ==================================================
+
+df_3m = calculate(get_data("3m"))
+
+df_5m = calculate(get_data("5m"))
+
+df_15m = calculate(get_data("15m"))
+
+df_1h = calculate(get_data("1h"))
+
+df_4h = calculate(get_data("4h"))
+
+# ==================================================
+# TRENDS
+# ==================================================
+
+trend_4h = get_trend(df_4h)
+
+trend_1h = get_trend(df_1h)
+
+trend_15m = get_trend(df_15m)
+
+# ==================================================
+# DIVERGENCE
+# ==================================================
+
+div_15m = detect_divergence(df_15m)
+
+div_1h = detect_divergence(df_1h)
+
+div_4h = detect_divergence(df_4h)
+
+# ==================================================
+# SCALPING ENGINE
+# ==================================================
+
+rsi_3m = df_3m["rsi"].iloc[-1]
+rsi_5m = df_5m["rsi"].iloc[-1]
+
+volume_state = volume_strength(df_15m)
+
+scalp_signal = "WAIT"
+
+confidence = 50
+
+# LONG
+
+if (
+    trend_4h == "LONG"
+    and trend_1h == "LONG"
+    and trend_15m == "LONG"
+):
+
+    confidence += 20
+
+    if rsi_5m > 50:
+
+        confidence += 10
+
+    if volume_state == "STRONG":
+
+        confidence += 10
+
+    if div_15m == "BULLISH":
+
+        confidence += 10
+
+    if (
+        rsi_3m > 50
+        and df_3m["close"].iloc[-1]
+        > df_3m["ema20"].iloc[-1]
+    ):
+
+        scalp_signal = "LONG"
+
+# SHORT
+
+elif (
+    trend_4h == "SHORT"
+    and trend_1h == "SHORT"
+    and trend_15m == "SHORT"
+):
+
+    confidence += 20
+
+    if rsi_5m < 50:
+
+        confidence += 10
+
+    if volume_state == "STRONG":
+
+        confidence += 10
+
+    if div_15m == "BEARISH":
+
+        confidence += 10
+
+    if (
+        rsi_3m < 50
+        and df_3m["close"].iloc[-1]
+        < df_3m["ema20"].iloc[-1]
+    ):
+
+        scalp_signal = "SHORT"
+
+# ==================================================
+# PRICE
+# ==================================================
+
+current_price = round(
+    df_3m["close"].iloc[-1],
+    4
+)
+
+# ==================================================
+# TP / SL
+# ==================================================
+
+if scalp_signal == "LONG":
+
+    entry = current_price
+
+    stop = round(
+        entry * 0.993,
+        4
+    )
+
+    tp1 = round(
+        entry * 1.01,
+        4
+    )
+
+    tp2 = round(
+        entry * 1.015,
+        4
+    )
+
+    tp3 = round(
+        entry * 1.02,
+        4
+    )
+
+elif scalp_signal == "SHORT":
+
+    entry = current_price
+
+    stop = round(
+        entry * 1.007,
+        4
+    )
+
+    tp1 = round(
+        entry * 0.99,
+        4
+    )
+
+    tp2 = round(
+        entry * 0.985,
+        4
+    )
+
+    tp3 = round(
+        entry * 0.98,
+        4
+    )
+
+else:
+
+    entry = "-"
+    stop = "-"
+    tp1 = "-"
+    tp2 = "-"
+    tp3 = "-"
+
+# ==================================================
+# SIGNAL COLOR
+# ==================================================
+
+if scalp_signal == "LONG":
+
+    signal_class = "long"
+
+elif scalp_signal == "SHORT":
+
+    signal_class = "short"
+
+else:
+
+    signal_class = "neutral"
+
+# ==================================================
+# SIGNAL CARD
+# ==================================================
+
+st.markdown(f"""
+
+<div class="card">
+
+<div class="{signal_class}">
+{scalp_signal}
+</div>
+
+<div class="info">
+💰 현재가 : {current_price}
+</div>
+
+<div class="info">
+🎯 진입가 : {entry}
+</div>
+
+<div class="info">
+🛑 손절가 : {stop}
+</div>
+
+<div class="info">
+🚀 TP1 (+1%) : {tp1}
+</div>
+
+<div class="info">
+🚀 TP2 (+1.5%) : {tp2}
+</div>
+
+<div class="info">
+🚀 TP3 (+2%) : {tp3}
+</div>
+
+<div class="info">
+📈 신뢰도 : {confidence}/100
+</div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# ==================================================
+# MARKET STATUS
+# ==================================================
+
+st.markdown(f"""
+
+<div class="card">
+
+<div class="card-title">
+📊 멀티 타임프레임 분석
+</div>
+
+<div class="box">
+4시간 추세 : {trend_4h}
+</div>
+
+<div class="box">
+1시간 추세 : {trend_1h}
+</div>
+
+<div class="box">
+15분 추세 : {trend_15m}
+</div>
+
+<div class="box">
+거래량 : {volume_state}
+</div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# ==================================================
+# DIVERGENCE CARD
+# ==================================================
+
+st.markdown(f"""
+
+<div class="card">
+
+<div class="card-title">
+⚡ RSI 다이버전스
+</div>
+
+<div class="box">
+15분 : {div_15m}
+</div>
+
+<div class="box">
+1시간 : {div_1h}
+</div>
+
+<div class="box">
+4시간 : {div_4h}
+</div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# ==================================================
+# SCALPING STATUS
+# ==================================================
+
+st.markdown(f"""
+
+<div class="card">
+
+<div class="card-title">
+⚡ 스캘핑 상태
+</div>
+
+<div class="box">
+3분 RSI : {round(rsi_3m,2)}
+</div>
+
+<div class="box">
+5분 RSI : {round(rsi_5m,2)}
+</div>
+
+<div class="box">
+진입 상태 : {scalp_signal}
+</div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# ==================================================
+# CHART
+# ==================================================
+
+fig = make_subplots(
+    rows=3,
+    cols=1,
+    shared_xaxes=True,
+    row_heights=[0.6,0.2,0.2]
+)
+
+# CANDLE
+
+fig.add_trace(
+    go.Candlestick(
+        x=df_15m["timestamp"],
+        open=df_15m["open"],
+        high=df_15m["high"],
+        low=df_15m["low"],
+        close=df_15m["close"],
+        name="PRICE"
+    ),
+    row=1,
+    col=1
+)
+
+# EMA20
+
+fig.add_trace(
+    go.Scatter(
+        x=df_15m["timestamp"],
+        y=df_15m["ema20"],
+        name="EMA20"
+    ),
+    row=1,
+    col=1
+)
+
+# EMA50
+
+fig.add_trace(
+    go.Scatter(
+        x=df_15m["timestamp"],
+        y=df_15m["ema50"],
+        name="EMA50"
+    ),
+    row=1,
+    col=1
+)
+
+# VOLUME
+
+fig.add_trace(
+    go.Bar(
+        x=df_15m["timestamp"],
+        y=df_15m["volume"],
+        name="Volume"
+    ),
+    row=2,
+    col=1
+)
+
+# RSI
+
+fig.add_trace(
+    go.Scatter(
+        x=df_15m["timestamp"],
+        y=df_15m["rsi"],
+        name="RSI"
+    ),
+    row=3,
+    col=1
+)
+
+fig.add_hline(
+    y=70,
+    row=3,
+    col=1
+)
+
+fig.add_hline(
+    y=30,
+    row=3,
+    col=1
+)
+
+fig.update_layout(
+
+    template="plotly_dark",
+
+    height=900,
+
+    paper_bgcolor="#0F172A",
+
+    plot_bgcolor="#0F172A",
+
+    font=dict(
+        color="white",
+        size=14
+    ),
+
+    xaxis_rangeslider_visible=False
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
+
+# ==================================================
+# UPDATE TIME
+# ==================================================
+
+st.caption(
+    f"업데이트 : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+)

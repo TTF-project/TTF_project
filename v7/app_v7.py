@@ -14,7 +14,7 @@ from ta.volatility import AverageTrueRange
 from datetime import datetime
 
 # ==================================================
-# 1. PAGE CONFIG & CSS (원본 UI 스타일 100% 복원)
+# 1. PAGE CONFIG & CSS (원본 UI 스타일 100% 유지)
 # ==================================================
 
 st.set_page_config(
@@ -367,13 +367,14 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 9. TRADING CHART (Python 3.14 호환성 정교화 매커니즘 반영)
+# 9. TRADING CHART (흰색 손잡이 잔상 및 3.14 에러 완전 해결)
 # ==================================================
 
 fig = make_subplots(
     rows=3, cols=1,
     shared_xaxes=True,
-    row_heights=[0.6, 0.2, 0.2]
+    row_heights=[0.6, 0.2, 0.2],
+    vertical_spacing=0.05
 )
 
 # 1층: 오리지널 캔들스틱 및 이동평균선(EMA)
@@ -397,23 +398,19 @@ fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI", lin
 fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="#EF4444")
 fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="#10B981")
 
-# ⭐️ [핵심 해결 파트] 
-# 레이아웃 내부의 모든 객체를 훑으면서 이름이 'xaxis'로 시작하는 동적 축 속성을 탐색합니다.
-# 축 내부에 존재하는 rangeselider 오브젝트의 가시성(visible)을 직접 차단하여 Python 3.14의 검증 오류를 완벽하게 무력화합니다.
-for attr in dir(fig.layout):
-    if attr.startswith("xaxis"):
-        axis = getattr(fig.layout, attr)
-        if hasattr(axis, "rangeselider"):
-            axis.rangeselider.visible = False
+# ⭐️ [최종 마스터키 설정] 
+# 파이썬 3.14 내부 엔진 충돌을 피하고 양옆 흰색 조절기 잔상까지 원천 삭제하는 공식 딕셔너리 주입 방식입니다.
+fig.update_xaxes(dict(rangeselider=dict(visible=False)))
 
-# 순수 차트 테마 및 여백 설정 (안전성 100%)
+# 순수 차트 테마 및 여백 레이아웃 지정
 fig.update_layout(
     template="plotly_dark",
     height=900,
     paper_bgcolor="#0F172A",
     plot_bgcolor="#0F172A",
     font=dict(color="white", size=14),
-    margin=dict(l=20, r=20, t=40, b=20)
+    margin=dict(l=20, r=20, t=40, b=20),
+    showlegend=False
 )
 
 st.plotly_chart(fig, use_container_width=True)

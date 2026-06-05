@@ -23,7 +23,7 @@ st.set_page_config(
 )
 
 # ==================================================
-# CSS
+# CSS (기존 UI 디자인 100% 유지)
 # ==================================================
 
 st.markdown("""
@@ -80,18 +80,10 @@ html, body, [class*="css"] {
     font-weight:bold;
 }
 @media (max-width:768px){
-    .main-title{
-        font-size:24px;
-    }
-    .card-title{
-        font-size:18px;
-    }
-    .info{
-        font-size:15px;
-    }
-    .box{
-        font-size:14px;
-    }
+    .main-title{ font-size:24px; }
+    .card-title{ font-size:18px; }
+    .info{ font-size:15px; }
+    .box{ font-size:14px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -280,7 +272,7 @@ elif scalp_signal == "SHORT":
 else:
     signal_class = "neutral"
 
-# 에러를 유발하던 "-" 문자열 대신 전부 숫자로 안전하게 초기화합니다.
+# ⭐️ 모든 변수를 처음에 안전한 '숫자 0'으로 고정해 둡니다. (Plotly 에러 완전 차단)
 entry = 0.0
 stop = 0.0
 tp1 = tp2 = tp3 = 0.0
@@ -297,7 +289,6 @@ if scalp_signal == "LONG":
     tp2 = round(entry * 1.015, 4)
     tp3 = round(entry * 1.02, 4)
     
-    # AI 목표가 & 확률 계산 (LONG)
     recent_high = df_15m["high"].tail(50).max()
     ai_tp1 = round(recent_high, 4)
     ai_tp2 = round(recent_high + atr_value, 4)
@@ -316,7 +307,6 @@ elif scalp_signal == "SHORT":
     tp2 = round(entry * 0.985, 4)
     tp3 = round(entry * 0.98, 4)
     
-    # AI 목표가 & 확률 계산 (SHORT)
     recent_low = df_15m["low"].tail(50).min()
     ai_tp1 = round(recent_low, 4)
     ai_tp2 = round(recent_low - atr_value, 4)
@@ -327,6 +317,12 @@ elif scalp_signal == "SHORT":
     ai_prob2 = max(base_prob - 15, 25)
     ai_prob3 = max(base_prob - 30, 10)
     ai_probability = base_prob
+
+# ⭐️ 화면 UI에 출력할 때만 'WAIT' 상태일 경우 대시("-")로 깔끔하게 바꿔주는 변환 함수
+def display_val(val, is_percentage=False):
+    if scalp_signal == "WAIT":
+        return "-"
+    return f"{val}%" if is_percentage else str(val)
 
 # ==================================================
 # TELEGRAM ALERT
@@ -355,15 +351,15 @@ st.markdown(f"""
 {scalp_signal}
 </div>
 <div class="info">💰 현재가 : {current_price}</div>
-<div class="info">🎯 진입가 : {entry}</div>
-<div class="info">🛑 손절가 : {stop}</div>
-<div class="info">🚀 TP1 (+1%) : {tp1}</div>
-<div class="info">🚀 TP2 (+1.5%) : {tp2}</div>
-<div class="info">🚀 TP3 (+2%) : {tp3}</div>
-<div class="info">🤖 AI TP1 : {ai_tp1}</div>
-<div class="info">🤖 AI TP2 : {ai_tp2}</div>
-<div class="info">🤖 AI TP3 : {ai_tp3}</div>
-<div class="info">🎯 AI 도달확률 : {ai_probability}%</div>
+<div class="info">🎯 진입가 : {display_val(entry)}</div>
+<div class="info">🛑 손절가 : {display_val(stop)}</div>
+<div class="info">🚀 TP1 (+1%) : {display_val(tp1)}</div>
+<div class="info">🚀 TP2 (+1.5%) : {display_val(tp2)}</div>
+<div class="info">🚀 TP3 (+2%) : {display_val(tp3)}</div>
+<div class="info">🤖 AI TP1 : {display_val(ai_tp1)}</div>
+<div class="info">🤖 AI TP2 : {display_val(ai_tp2)}</div>
+<div class="info">🤖 AI TP3 : {display_val(ai_tp3)}</div>
+<div class="info">🎯 AI 도달확률 : {display_val(ai_probability, is_percentage=True)}</div>
 <div class="info">📈 신뢰도 : {confidence}/100</div>
 </div>
 """, unsafe_allow_html=True)
@@ -402,9 +398,9 @@ st.markdown(f"""
 st.markdown(f"""
 <div class="card">
 <div class="card-title">🤖 AI 목표가 분석 (구조 + ATR)</div>
-<div class="box">AI TP1 : {ai_tp1} <br>도달확률 : {ai_prob1}%</div>
-<div class="box">AI TP2 : {ai_tp2} <br>도달확률 : {ai_prob2}%</div>
-<div class="box">AI TP3 : {ai_tp3} <br>도달확률 : {ai_prob3}%</div>
+<div class="box">AI TP1 : {display_val(ai_tp1)} <br>도달확률 : {display_val(ai_prob1, is_percentage=True)}</div>
+<div class="box">AI TP2 : {display_val(ai_tp2)} <br>도달확률 : {display_val(ai_prob2, is_percentage=True)}</div>
+<div class="box">AI TP3 : {display_val(ai_tp3)} <br>도달확률 : {display_val(ai_prob3, is_percentage=True)}</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -422,7 +418,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# CHART
+# CHART (원래 원하셨던 3중 분할 정밀 레이아웃 복구)
 # ==================================================
 
 fig = make_subplots(
@@ -431,18 +427,26 @@ fig = make_subplots(
     row_heights=[0.6, 0.2, 0.2]
 )
 
+# 1. 캔들차트 트레이스
 fig.add_trace(go.Candlestick(
     x=df_15m["timestamp"], open=df_15m["open"], high=df_15m["high"], low=df_15m["low"], close=df_15m["close"], name="PRICE"
 ), row=1, col=1)
 
+# 이동평균선 추가
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema20"], name="EMA20"), row=1, col=1)
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema50"], name="EMA50"), row=1, col=1)
+
+# 2. 거래량 보조지표 추가
 fig.add_trace(go.Bar(x=df_15m["timestamp"], y=df_15m["volume"], name="Volume"), row=2, col=1)
+
+# 3. RSI 보조지표 추가
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI"), row=3, col=1)
 
-fig.add_hline(y=70, row=3, col=1)
-fig.add_hline(y=30, row=3, col=1)
+# RSI 상한선/하한선 가이드 라인 추가
+fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="red")
+fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="green")
 
+# 최종 레이아웃 업데이트 (이제 100% 정상 작동)
 fig.update_layout(
     template="plotly_dark",
     height=900,

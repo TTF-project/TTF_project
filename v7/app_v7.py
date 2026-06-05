@@ -640,15 +640,15 @@ if scalp_signal == "LONG":
     )
 
     base_prob = min(
-    round(confidence * 0.9),
-    95
+        round(confidence * 0.9),
+        95
     )
 
-ai_prob1 = max(base_prob, 40)
+    ai_prob1 = max(base_prob, 40)
 
-ai_prob2 = max(base_prob - 15, 25)
+    ai_prob2 = max(base_prob - 15, 25)
 
-ai_prob3 = max(base_prob - 30, 10)
+    ai_prob3 = max(base_prob - 30, 10)
 
 elif scalp_signal == "SHORT":
 

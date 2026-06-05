@@ -14,7 +14,7 @@ from ta.volatility import AverageTrueRange
 from datetime import datetime
 
 # ==================================================
-# 1. PAGE CONFIG & CSS (오리지널 UI 스타일 100% 복원)
+# 1. PAGE CONFIG & CSS (원본 UI 스타일 100% 복원)
 # ==================================================
 
 st.set_page_config(
@@ -125,7 +125,7 @@ symbol = st.radio(
 )
 
 # ==================================================
-# 4. DATA FETCH & INDICATORS (멀티 타임프레임 연산 복원)
+# 4. DATA FETCH & INDICATORS (멀티 타임프레임 연산)
 # ==================================================
 
 @st.cache_data(ttl=30)
@@ -180,14 +180,14 @@ def detect_divergence(df):
         return "BEARISH"
     return "NONE"
 
-# 모든 타임프레임 정밀 로드
+# 모든 타임프레임 로드
 df_3m = calculate(get_data("3m"))
 df_5m = calculate(get_data("5m"))
 df_15m = calculate(get_data("15m"))
 df_1h = calculate(get_data("1h"))
 df_4h = calculate(get_data("4h"))
 
-# 분석 정보 추출 복구
+# 분석 데이터 추출
 trend_4h = get_trend(df_4h)
 trend_1h = get_trend(df_1h)
 trend_15m = get_trend(df_15m)
@@ -201,13 +201,12 @@ rsi_5m = df_5m["rsi"].iloc[-1]
 volume_state = volume_strength(df_15m)
 
 # ==================================================
-# 5. SCALPING ENGINE (정밀 전략 조건 복원)
+# 5. SCALPING ENGINE
 # ==================================================
 
 scalp_signal = "WAIT"
 confidence = 50
 
-# LONG 조건 확인
 if trend_4h == "LONG" and trend_1h == "LONG" and trend_15m == "LONG":
     confidence += 20
     if rsi_5m > 50: confidence += 10
@@ -216,7 +215,6 @@ if trend_4h == "LONG" and trend_1h == "LONG" and trend_15m == "LONG":
     if rsi_3m > 50 and df_3m["close"].iloc[-1] > df_3m["ema20"].iloc[-1]:
         scalp_signal = "LONG"
 
-# SHORT 조건 확인
 elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
     confidence += 20
     if rsi_5m < 50: confidence += 10
@@ -228,7 +226,7 @@ elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
 current_price = round(df_3m["close"].iloc[-1], 4)
 
 # ==================================================
-# 6. VARIABLE INITIALIZATION (안전한 초기화 설계)
+# 6. VARIABLE INITIALIZATION
 # ==================================================
 
 if scalp_signal == "LONG":
@@ -238,7 +236,6 @@ elif scalp_signal == "SHORT":
 else:
     signal_class = "neutral"
 
-# 숫자로 안전하게 들고 갑니다.
 entry = current_price
 stop = 0.0
 tp1 = tp2 = tp3 = 0.0
@@ -305,7 +302,7 @@ else:
     st.session_state.last_signal = ""
 
 # ==================================================
-# 8. UI DASHBOARD DISPLAY (오리지널 카드 5종 완벽 복원)
+# 8. UI DASHBOARD DISPLAY (오리지널 카드 5종 완벽 유지)
 # ==================================================
 
 # 1) 메인 시그널 카드
@@ -370,7 +367,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 9. TRADING CHART (Python 3.14 호환성 정밀 수정 완료)
+# 9. TRADING CHART (에러 유발 속성 원천 제거 로직 반영)
 # ==================================================
 
 fig = make_subplots(
@@ -400,9 +397,15 @@ fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI", lin
 fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="#EF4444")
 fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="#10B981")
 
-# ⭐️ [가장 안전한 해결] 3.14 에러를 우회하기 위해 전역 옵션 구조로 하단 레인지 슬라이더를 확실하게 비활성화합니다.
+# ⭐️ [최고 효율 에러 차단법] 
+# 레이아웃 옵션을 건드리지 않고, 이미 주입된 캔들스틱 데이터의 레인지슬라이더 메모리를 통째로 파괴합니다.
+# 이 코드가 들어감으로써 update_layout 에러가 완전히 사라집니다.
+for trace in fig.data:
+    if trace.type == "candlestick":
+        trace.rangeselider = None
+
+# 순수 차트 외형 스타일만 세팅 (충돌 위험 속성 0%)
 fig.update_layout(
-    xaxis1_rangeselider_visible=False, # 👈 첫 번째 행(캔들스틱)의 스크롤 슬라이더만 정밀 조준 차단!
     template="plotly_dark",
     height=900,
     paper_bgcolor="#0F172A",

@@ -462,49 +462,23 @@ if scalp_signal == "LONG":
 
     entry = current_price
 
-    stop = round(
-        entry * 0.993,
-        4
-    )
+    stop = round(entry * 0.993, 4)
 
-    tp1 = round(
-        entry * 1.01,
-        4
-    )
+    tp1 = round(entry * 1.01, 4)
+    tp2 = round(entry * 1.015, 4)
+    tp3 = round(entry * 1.02, 4)
 
-    tp2 = round(
-        entry * 1.015,
-        4
-    )
-
-    tp3 = round(
-        entry * 1.02,
-        4
-    )
 
 elif scalp_signal == "SHORT":
 
     entry = current_price
 
-    stop = round(
-        entry * 1.007,
-        4
-    )
+    stop = round(entry * 1.007, 4)
 
-    tp1 = round(
-        entry * 0.99,
-        4
-    )
+    tp1 = round(entry * 0.99, 4)
+    tp2 = round(entry * 0.985, 4)
+    tp3 = round(entry * 0.98, 4)
 
-    tp2 = round(
-        entry * 0.985,
-        4
-    )
-
-    tp3 = round(
-        entry * 0.98,
-        4
-    )
 
 else:
 
@@ -513,6 +487,52 @@ else:
     tp1 = "-"
     tp2 = "-"
     tp3 = "-"
+
+# ==================================================
+# AI TARGET (STRUCTURE + ATR)
+# ==================================================
+
+if scalp_signal == "LONG":
+
+    recent_high = df_15m["high"].tail(50).max()
+    atr_value = df_15m["atr"].iloc[-1]
+
+    ai_tp1 = round(recent_high, 4)
+    ai_tp2 = round(recent_high + atr_value, 4)
+    ai_tp3 = round(recent_high + atr_value * 2, 4)
+
+    base_prob = min(round(confidence * 0.9), 95)
+
+    ai_prob1 = max(base_prob, 40)
+    ai_prob2 = max(base_prob - 15, 25)
+    ai_prob3 = max(base_prob - 30, 10)
+
+
+elif scalp_signal == "SHORT":
+
+    recent_low = df_15m["low"].tail(50).min()
+    atr_value = df_15m["atr"].iloc[-1]
+
+    ai_tp1 = round(recent_low, 4)
+    ai_tp2 = round(recent_low - atr_value, 4)
+    ai_tp3 = round(recent_low - atr_value * 2, 4)
+
+    base_prob = min(round(confidence * 0.9), 95)
+
+    ai_prob1 = max(base_prob, 40)
+    ai_prob2 = max(base_prob - 15, 25)
+    ai_prob3 = max(base_prob - 30, 10)
+
+
+else:
+
+    ai_tp1 = "-"
+    ai_tp2 = "-"
+    ai_tp3 = "-"
+
+    ai_prob1 = "-"
+    ai_prob2 = "-"
+    ai_prob3 = "-"
 
 # ==================================================
 # TELEGRAM ALERT
@@ -842,34 +862,22 @@ st.markdown(f"""
 <div class="card">
 
 <div class="card-title">
-🤖 AI 목표가 분석
+🤖 AI 목표가 분석 (구조 + ATR)
 </div>
 
 <div class="box">
-AI TP1 : {ai_tp1}
+AI TP1 : {ai_tp1} <br>
+도달확률 : {ai_prob1}%
 </div>
 
 <div class="box">
-AI TP2 : {ai_tp2}
+AI TP2 : {ai_tp2} <br>
+도달확률 : {ai_prob2}%
 </div>
 
 <div class="box">
-AI TP3 : {ai_tp3}
-</div>
-
-<div class="box">
-AI TP1 : {ai_tp1}
-(도달확률 {ai_prob1}%)
-</div>
-
-<div class="box">
-AI TP2 : {ai_tp2}
-(도달확률 {ai_prob2}%)
-</div>
-
-<div class="box">
-AI TP3 : {ai_tp3}
-(도달확률 {ai_prob3}%)
+AI TP3 : {ai_tp3} <br>
+도달확률 : {ai_prob3}%
 </div>
 
 </div>

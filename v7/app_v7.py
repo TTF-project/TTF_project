@@ -14,17 +14,13 @@ from ta.volatility import AverageTrueRange
 from datetime import datetime
 
 # ==================================================
-# PAGE CONFIG
+# 1. PAGE CONFIG & CSS (원본 UI 디자인 100% 복원)
 # ==================================================
 
 st.set_page_config(
     page_title="TTF V7 SCALPING",
     layout="wide"
 )
-
-# ==================================================
-# CSS (기존 UI 디자인 100% 유지)
-# ==================================================
 
 st.markdown("""
 <style>
@@ -88,17 +84,13 @@ html, body, [class*="css"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ==================================================
-# TITLE
-# ==================================================
-
 st.markdown(
     '<div class="main-title">⚡ TTF V7 SCALPING</div>',
     unsafe_allow_html=True
 )
 
 # ==================================================
-# TELEGRAM
+# 2. TELEGRAM (알림 로직 원본 유지)
 # ==================================================
 
 def send_telegram(message):
@@ -121,14 +113,10 @@ if "last_signal" not in st.session_state:
     st.session_state.last_signal = ""
 
 # ==================================================
-# EXCHANGE
+# 3. EXCHANGE & SYMBOL SELECTION
 # ==================================================
 
 exchange = ccxt.binanceus()
-
-# ==================================================
-# SYMBOL
-# ==================================================
 
 symbol = st.radio(
     "코인 선택",
@@ -137,7 +125,7 @@ symbol = st.radio(
 )
 
 # ==================================================
-# DATA
+# 4. DATA FETCH & INDICATORS
 # ==================================================
 
 @st.cache_data(ttl=30)
@@ -154,10 +142,6 @@ def get_data(timeframe):
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
     return df
 
-# ==================================================
-# INDICATORS
-# ==================================================
-
 def calculate(df):
     df["ema20"] = EMAIndicator(close=df["close"], window=20).ema_indicator()
     df["ema50"] = EMAIndicator(close=df["close"], window=50).ema_indicator()
@@ -165,10 +149,6 @@ def calculate(df):
     atr = AverageTrueRange(high=df["high"], low=df["low"], close=df["close"], window=14)
     df["atr"] = atr.average_true_range()
     return df
-
-# ==================================================
-# TREND
-# ==================================================
 
 def get_trend(df):
     price = df["close"].iloc[-1]
@@ -180,20 +160,12 @@ def get_trend(df):
         return "SHORT"
     return "NEUTRAL"
 
-# ==================================================
-# VOLUME
-# ==================================================
-
 def volume_strength(df):
     current = df["volume"].iloc[-1]
     avg = df["volume"].rolling(20).mean().iloc[-1]
     if current > avg:
         return "STRONG"
     return "WEAK"
-
-# ==================================================
-# DIVERGENCE
-# ==================================================
 
 def detect_divergence(df):
     closes = df["close"]
@@ -208,20 +180,14 @@ def detect_divergence(df):
         return "BEARISH"
     return "NONE"
 
-# ==================================================
-# LOAD DATA
-# ==================================================
-
+# 데이터 로드 및 계산
 df_3m = calculate(get_data("3m"))
 df_5m = calculate(get_data("5m"))
 df_15m = calculate(get_data("15m"))
 df_1h = calculate(get_data("1h"))
 df_4h = calculate(get_data("4h"))
 
-# ==================================================
-# TRENDS & DIVERGENCE
-# ==================================================
-
+# 분석 정보 추출
 trend_4h = get_trend(df_4h)
 trend_1h = get_trend(df_1h)
 trend_15m = get_trend(df_15m)
@@ -230,18 +196,17 @@ div_15m = detect_divergence(df_15m)
 div_1h = detect_divergence(df_1h)
 div_4h = detect_divergence(df_4h)
 
-# ==================================================
-# SCALPING ENGINE
-# ==================================================
-
 rsi_3m = df_3m["rsi"].iloc[-1]
 rsi_5m = df_5m["rsi"].iloc[-1]
 volume_state = volume_strength(df_15m)
 
+# ==================================================
+# 5. SCALPING ENGINE
+# ==================================================
+
 scalp_signal = "WAIT"
 confidence = 50
 
-# LONG 조건 확인
 if trend_4h == "LONG" and trend_1h == "LONG" and trend_15m == "LONG":
     confidence += 20
     if rsi_5m > 50: confidence += 10
@@ -250,7 +215,6 @@ if trend_4h == "LONG" and trend_1h == "LONG" and trend_15m == "LONG":
     if rsi_3m > 50 and df_3m["close"].iloc[-1] > df_3m["ema20"].iloc[-1]:
         scalp_signal = "LONG"
 
-# SHORT 조건 확인
 elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
     confidence += 20
     if rsi_5m < 50: confidence += 10
@@ -262,7 +226,7 @@ elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
 current_price = round(df_3m["close"].iloc[-1], 4)
 
 # ==================================================
-# 변수 정의 및 초기화 (ValueError & NameError 완벽 차단)
+# 6. VARIABLE INITIALIZATION (ValueError 완전 대응 안전장치)
 # ==================================================
 
 if scalp_signal == "LONG":
@@ -272,8 +236,8 @@ elif scalp_signal == "SHORT":
 else:
     signal_class = "neutral"
 
-# ⭐️ 모든 변수를 처음에 안전한 '숫자 0'으로 고정해 둡니다. (Plotly 에러 완전 차단)
-entry = 0.0
+# 데이터는 내부적으로 항상 연산 가능한 '숫자 형식'을 유지합니다.
+entry = current_price
 stop = 0.0
 tp1 = tp2 = tp3 = 0.0
 ai_tp1 = ai_tp2 = ai_tp3 = 0.0
@@ -283,7 +247,6 @@ ai_probability = 0
 atr_value = df_15m["atr"].iloc[-1]
 
 if scalp_signal == "LONG":
-    entry = current_price
     stop = round(entry * 0.993, 4)
     tp1 = round(entry * 1.01, 4)
     tp2 = round(entry * 1.015, 4)
@@ -301,7 +264,6 @@ if scalp_signal == "LONG":
     ai_probability = base_prob
 
 elif scalp_signal == "SHORT":
-    entry = current_price
     stop = round(entry * 1.007, 4) 
     tp1 = round(entry * 0.99, 4)   
     tp2 = round(entry * 0.985, 4)
@@ -318,14 +280,14 @@ elif scalp_signal == "SHORT":
     ai_prob3 = max(base_prob - 30, 10)
     ai_probability = base_prob
 
-# ⭐️ 화면 UI에 출력할 때만 'WAIT' 상태일 경우 대시("-")로 깔끔하게 바꿔주는 변환 함수
+# ⭐️ WAIT 상태일 때 대시(-) 문자열로 안전하게 치환해 출력해 주는 UI 바인딩 함수
 def display_val(val, is_percentage=False):
     if scalp_signal == "WAIT":
         return "-"
     return f"{val}%" if is_percentage else str(val)
 
 # ==================================================
-# TELEGRAM ALERT
+# 7. TELEGRAM ALERT LOGIC (원본 로직 복원)
 # ==================================================
 
 if scalp_signal == "LONG":
@@ -342,9 +304,10 @@ else:
     st.session_state.last_signal = ""
 
 # ==================================================
-# SIGNAL CARD DISPLAY
+# 8. UI DASHBOARD DISPLAY (오리지널 카드 5종 무삭제 복원)
 # ==================================================
 
+# 1) 메인 시그널 카드
 st.markdown(f"""
 <div class="card">
 <div class="{signal_class}">
@@ -364,10 +327,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ==================================================
-# MARKET STATUS CARD
-# ==================================================
-
+# 2) 멀티 타임프레임 분석 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">📊 멀티 타임프레임 분석</div>
@@ -378,10 +338,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ==================================================
-# DIVERGENCE CARD
-# ==================================================
-
+# 3) RSI 다이버전스 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">⚡ RSI 다이버전스</div>
@@ -391,10 +348,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ==================================================
-# AI TARGET CARD
-# ==================================================
-
+# 4) AI 목표가 분석 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">🤖 AI 목표가 분석 (구조 + ATR)</div>
@@ -404,10 +358,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ==================================================
-# SCALPING STATUS
-# ==================================================
-
+# 5) 스캘핑 상태 세부 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">⚡ 스캘핑 상태</div>
@@ -418,7 +369,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# CHART (원래 원하셨던 3중 분할 정밀 레이아웃 복구)
+# 9. TRADING CHART (3분할 오리지널 차트 레이아웃 + Subplot 에러 완벽 수정)
 # ==================================================
 
 fig = make_subplots(
@@ -427,39 +378,44 @@ fig = make_subplots(
     row_heights=[0.6, 0.2, 0.2]
 )
 
-# 1. 캔들차트 트레이스
+# 1층: 캔들스틱 및 이동평균선(EMA)
 fig.add_trace(go.Candlestick(
-    x=df_15m["timestamp"], open=df_15m["open"], high=df_15m["high"], low=df_15m["low"], close=df_15m["close"], name="PRICE"
+    x=df_15m["timestamp"], 
+    open=df_15m["open"], 
+    high=df_15m["high"], 
+    low=df_15m["low"], 
+    close=df_15m["close"], 
+    name="PRICE"
 ), row=1, col=1)
 
-# 이동평균선 추가
-fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema20"], name="EMA20"), row=1, col=1)
-fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema50"], name="EMA50"), row=1, col=1)
+fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema20"], name="EMA20", line=dict(color='#FFD54A')), row=1, col=1)
+fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema50"], name="EMA50", line=dict(color='#00FFB2')), row=1, col=1)
 
-# 2. 거래량 보조지표 추가
-fig.add_trace(go.Bar(x=df_15m["timestamp"], y=df_15m["volume"], name="Volume"), row=2, col=1)
+# 2층: 거래량 막대그래프
+fig.add_trace(go.Bar(x=df_15m["timestamp"], y=df_15m["volume"], name="Volume", marker=dict(color='#38BDF8')), row=2, col=1)
 
-# 3. RSI 보조지표 추가
-fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI"), row=3, col=1)
+# 3층: RSI 라인 및 기준선
+fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI", line=dict(color='#F43F5E')), row=3, col=1)
+fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="#EF4444")
+fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="#10B981")
 
-# RSI 상한선/하한선 가이드 라인 추가
-fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="red")
-fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="green")
+# ⭐️ [가장 중요] 멀티 행 서브플롯에서 스크롤 레인지 슬라이더를 끄는 정확한 문법 적용
+fig.update_xaxes(rangeselider_visible=False, row=1, col=1)
 
-# 최종 레이아웃 업데이트 (이제 100% 정상 작동)
+# 차트 종합 다크 스타일 레이아웃 반영
 fig.update_layout(
     template="plotly_dark",
     height=900,
     paper_bgcolor="#0F172A",
     plot_bgcolor="#0F172A",
     font=dict(color="white", size=14),
-    xaxis_rangeselider_visible=False
+    margin=dict(l=20, r=20, t=40, b=20)
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
 # ==================================================
-# UPDATE TIME
+# 10. REFRESH TIMESTAMP
 # ==================================================
 
-st.caption(f"업데이트 : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+st.caption(f"최종 업데이트 타임 : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

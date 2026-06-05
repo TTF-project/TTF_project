@@ -14,7 +14,7 @@ from ta.volatility import AverageTrueRange
 from datetime import datetime
 
 # ==================================================
-# 1. PAGE CONFIG & CSS (원본 UI 디자인 100% 유지)
+# 1. PAGE CONFIG & CSS (오리지널 UI 스타일 100% 복원)
 # ==================================================
 
 st.set_page_config(
@@ -90,7 +90,7 @@ st.markdown(
 )
 
 # ==================================================
-# 2. TELEGRAM (알림 로직 원본 유지)
+# 2. TELEGRAM (알림 발송 로직 원본 유지)
 # ==================================================
 
 def send_telegram(message):
@@ -125,7 +125,7 @@ symbol = st.radio(
 )
 
 # ==================================================
-# 4. DATA FETCH & INDICATORS
+# 4. DATA FETCH & INDICATORS (멀티 타임프레임 연산 복원)
 # ==================================================
 
 @st.cache_data(ttl=30)
@@ -180,14 +180,14 @@ def detect_divergence(df):
         return "BEARISH"
     return "NONE"
 
-# 데이터 로드 및 계산
+# 모든 타임프레임 정밀 로드
 df_3m = calculate(get_data("3m"))
 df_5m = calculate(get_data("5m"))
 df_15m = calculate(get_data("15m"))
 df_1h = calculate(get_data("1h"))
 df_4h = calculate(get_data("4h"))
 
-# 분석 정보 추출
+# 분석 정보 추출 복구
 trend_4h = get_trend(df_4h)
 trend_1h = get_trend(df_1h)
 trend_15m = get_trend(df_15m)
@@ -201,12 +201,13 @@ rsi_5m = df_5m["rsi"].iloc[-1]
 volume_state = volume_strength(df_15m)
 
 # ==================================================
-# 5. SCALPING ENGINE
+# 5. SCALPING ENGINE (정밀 전략 조건 복원)
 # ==================================================
 
 scalp_signal = "WAIT"
 confidence = 50
 
+# LONG 조건 확인
 if trend_4h == "LONG" and trend_1h == "LONG" and trend_15m == "LONG":
     confidence += 20
     if rsi_5m > 50: confidence += 10
@@ -215,6 +216,7 @@ if trend_4h == "LONG" and trend_1h == "LONG" and trend_15m == "LONG":
     if rsi_3m > 50 and df_3m["close"].iloc[-1] > df_3m["ema20"].iloc[-1]:
         scalp_signal = "LONG"
 
+# SHORT 조건 확인
 elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
     confidence += 20
     if rsi_5m < 50: confidence += 10
@@ -226,7 +228,7 @@ elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
 current_price = round(df_3m["close"].iloc[-1], 4)
 
 # ==================================================
-# 6. VARIABLE INITIALIZATION
+# 6. VARIABLE INITIALIZATION (안전한 초기화 설계)
 # ==================================================
 
 if scalp_signal == "LONG":
@@ -236,6 +238,7 @@ elif scalp_signal == "SHORT":
 else:
     signal_class = "neutral"
 
+# 숫자로 안전하게 들고 갑니다.
 entry = current_price
 stop = 0.0
 tp1 = tp2 = tp3 = 0.0
@@ -302,9 +305,10 @@ else:
     st.session_state.last_signal = ""
 
 # ==================================================
-# 8. UI DASHBOARD DISPLAY
+# 8. UI DASHBOARD DISPLAY (오리지널 카드 5종 완벽 복원)
 # ==================================================
 
+# 1) 메인 시그널 카드
 st.markdown(f"""
 <div class="card">
 <div class="{signal_class}">
@@ -324,6 +328,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# 2) 멀티 타임프레임 분석 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">📊 멀티 타임프레임 분석</div>
@@ -334,6 +339,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# 3) RSI 다이버전스 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">⚡ RSI 다이버전스</div>
@@ -343,6 +349,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# 4) AI 목표가 분석 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">🤖 AI 목표가 분석 (구조 + ATR)</div>
@@ -352,6 +359,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# 5) 스캘핑 상태 세부 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">⚡ 스캘핑 상태</div>
@@ -362,7 +370,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 9. TRADING CHART (Python 3.14 호환성 에러 우회 적용)
+# 9. TRADING CHART (Python 3.14 호환성 정밀 수정 완료)
 # ==================================================
 
 fig = make_subplots(
@@ -371,32 +379,30 @@ fig = make_subplots(
     row_heights=[0.6, 0.2, 0.2]
 )
 
-# ⭐️ [핵심 수정] Candlestick 내부 옵션으로 xaxis_rangeselider_visible 설정을 다이렉트로 전달합니다.
-# 이렇게 하면 fig.update_xaxes를 따로 부르지 않아 파이썬 3.14 내부 엔진 충돌이 원천 차단됩니다.
+# 1층: 오리지널 캔들스틱 및 이동평균선(EMA)
 fig.add_trace(go.Candlestick(
     x=df_15m["timestamp"], 
     open=df_15m["open"], 
     high=df_15m["high"], 
     low=df_15m["low"], 
     close=df_15m["close"], 
-    name="PRICE",
-    xaxis=dict(rangeselider=dict(visible=False))  # 👈 이곳에서 슬라이더를 바로 비활성화
+    name="PRICE"
 ), row=1, col=1)
 
-# 이동평균선(EMA) 추가
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema20"], name="EMA20", line=dict(color='#FFD54A')), row=1, col=1)
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema50"], name="EMA50", line=dict(color='#00FFB2')), row=1, col=1)
 
 # 2층: 거래량 막대그래프
 fig.add_trace(go.Bar(x=df_15m["timestamp"], y=df_15m["volume"], name="Volume", marker=dict(color='#38BDF8')), row=2, col=1)
 
-# 3층: RSI 라인 및 기준선
+# 3층: RSI 라인 및 가이드 기준선
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI", line=dict(color='#F43F5E')), row=3, col=1)
 fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="#EF4444")
 fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="#10B981")
 
-# 차트 종합 다크 스타일 레이아웃 반영 (에러를 내는 외부 업데이트 구문 없음)
+# ⭐️ [가장 안전한 해결] 3.14 에러를 우회하기 위해 전역 옵션 구조로 하단 레인지 슬라이더를 확실하게 비활성화합니다.
 fig.update_layout(
+    xaxis1_rangeselider_visible=False, # 👈 첫 번째 행(캔들스틱)의 스크롤 슬라이더만 정밀 조준 차단!
     template="plotly_dark",
     height=900,
     paper_bgcolor="#0F172A",

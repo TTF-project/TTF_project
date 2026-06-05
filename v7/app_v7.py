@@ -12,6 +12,7 @@ from ta.momentum import RSIIndicator
 from ta.volatility import AverageTrueRange
 
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
 # ==================================================
 # 1. PAGE CONFIG & CSS (원본 UI 스타일 100% 유지)
@@ -89,6 +90,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st_autorefresh(
+    interval=15000,
+    key="refresh"
+)
+
 # ==================================================
 # 2. TELEGRAM (알림 발송 로직 원본 유지)
 # ==================================================
@@ -106,8 +112,14 @@ def send_telegram(message):
             },
             timeout=10
         )
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"텔레그램 오류: {e}")
+
+
+# 테스트 버튼
+if st.button("텔레그램 테스트"):
+    send_telegram("✅ TTF V7 테스트 메시지")
+    st.success("전송 시도 완료")
 
 if "last_signal" not in st.session_state:
     st.session_state.last_signal = ""
@@ -129,7 +141,7 @@ symbol = st.radio(
 # ==================================================
 
 @st.cache_data(ttl=30)
-def get_data(timeframe):
+def get_data(symbol, timeframe):
     ohlcv = exchange.fetch_ohlcv(
         symbol,
         timeframe=timeframe,
@@ -181,11 +193,11 @@ def detect_divergence(df):
     return "NONE"
 
 # 모든 타임프레임 로드
-df_3m = calculate(get_data("3m"))
-df_5m = calculate(get_data("5m"))
-df_15m = calculate(get_data("15m"))
-df_1h = calculate(get_data("1h"))
-df_4h = calculate(get_data("4h"))
+df_3m = calculate(get_data(symbol, "3m"))
+df_5m = calculate(get_data(symbol, "5m"))
+df_15m = calculate(get_data(symbol, "15m"))
+df_1h = calculate(get_data(symbol, "1h"))
+df_4h = calculate(get_data(symbol, "4h"))
 
 # 분석 데이터 추출
 trend_4h = get_trend(df_4h)

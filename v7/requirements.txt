@@ -5,3 +5,4 @@ ccxt
 plotly
 ta
 requests
+streamlit-autorefresh

@@ -270,10 +270,9 @@ elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
 current_price = round(df_3m["close"].iloc[-1], 4)
 
 # ==================================================
-# [수정] 변수 정의 및 초기화 (NameError 완벽 차단)
+# 변수 정의 및 초기화 (ValueError & NameError 완벽 차단)
 # ==================================================
 
-# CSS 클래스 매칭 수정
 if scalp_signal == "LONG":
     signal_class = "long"
 elif scalp_signal == "SHORT":
@@ -281,13 +280,13 @@ elif scalp_signal == "SHORT":
 else:
     signal_class = "neutral"
 
-# 모든 상태에서 모든 변수가 안정적으로 존재하도록 미리 초기화
-entry = "-"
-stop = "-"
-tp1 = tp2 = tp3 = "-"
-ai_tp1 = ai_tp2 = ai_tp3 = "-"
-ai_prob1 = ai_prob2 = ai_prob3 = "-"
-ai_probability = "-"
+# 에러를 유발하던 "-" 문자열 대신 전부 숫자로 안전하게 초기화합니다.
+entry = 0.0
+stop = 0.0
+tp1 = tp2 = tp3 = 0.0
+ai_tp1 = ai_tp2 = ai_tp3 = 0.0
+ai_prob1 = ai_prob2 = ai_prob3 = 0
+ai_probability = 0
 
 atr_value = df_15m["atr"].iloc[-1]
 
@@ -308,12 +307,12 @@ if scalp_signal == "LONG":
     ai_prob1 = max(base_prob, 40)
     ai_prob2 = max(base_prob - 15, 25)
     ai_prob3 = max(base_prob - 30, 10)
-    ai_probability = base_prob  # 하단 통합 표시용
+    ai_probability = base_prob
 
 elif scalp_signal == "SHORT":
     entry = current_price
-    stop = round(entry * 1.007, 4) # SHORT 일 때의 손절가 계산 추가
-    tp1 = round(entry * 0.99, 4)   # SHORT 일 때의 익절가 계산 추가
+    stop = round(entry * 1.007, 4) 
+    tp1 = round(entry * 0.99, 4)   
     tp2 = round(entry * 0.985, 4)
     tp3 = round(entry * 0.98, 4)
     
@@ -323,11 +322,11 @@ elif scalp_signal == "SHORT":
     ai_tp2 = round(recent_low - atr_value, 4)
     ai_tp3 = round(recent_low - atr_value * 2, 4)
     
-    base_prob = min(round(confidence * 0.8), 95) # 0.8 가중치 유지
+    base_prob = min(round(confidence * 0.8), 95) 
     ai_prob1 = max(base_prob, 40)
     ai_prob2 = max(base_prob - 15, 25)
     ai_prob3 = max(base_prob - 30, 10)
-    ai_probability = base_prob  # 하단 통합 표시용
+    ai_probability = base_prob
 
 # ==================================================
 # TELEGRAM ALERT

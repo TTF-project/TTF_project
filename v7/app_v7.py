@@ -600,10 +600,16 @@ if scalp_signal == "LONG":
         4
     )
 
-    ai_probability = min(
-        round(confidence * 0.8),
-        95
-    )
+    base_prob = min(
+    round(confidence * 0.9),
+    95
+)
+
+ai_prob1 = max(base_prob, 40)
+
+ai_prob2 = max(base_prob - 15, 25)
+
+ai_prob3 = max(base_prob - 30, 10)
 
 elif scalp_signal == "SHORT":
 
@@ -641,15 +647,71 @@ else:
 
 if scalp_signal == "LONG":
 
-    signal_class = "long"
+    recent_high = df_15m["high"].tail(50).max()
+
+    atr_value = df_15m["atr"].iloc[-1]
+
+    ai_tp1 = round(recent_high, 4)
+
+    ai_tp2 = round(
+        recent_high + atr_value,
+        4
+    )
+
+    ai_tp3 = round(
+        recent_high + atr_value * 2,
+        4
+    )
+
+    base_prob = min(
+        round(confidence * 0.9),
+        95
+    )
+
+    ai_prob1 = max(base_prob, 40)
+
+    ai_prob2 = max(base_prob - 15, 25)
+
+    ai_prob3 = max(base_prob - 30, 10)
 
 elif scalp_signal == "SHORT":
 
-    signal_class = "short"
+    recent_low = df_15m["low"].tail(50).min()
+
+    atr_value = df_15m["atr"].iloc[-1]
+
+    ai_tp1 = round(recent_low, 4)
+
+    ai_tp2 = round(
+        recent_low - atr_value,
+        4
+    )
+
+    ai_tp3 = round(
+        recent_low - atr_value * 2,
+        4
+    )
+
+    base_prob = min(
+        round(confidence * 0.9),
+        95
+    )
+
+    ai_prob1 = max(base_prob, 40)
+
+    ai_prob2 = max(base_prob - 15, 25)
+
+    ai_prob3 = max(base_prob - 30, 10)
 
 else:
 
-    signal_class = "neutral"
+    ai_tp1 = "-"
+    ai_tp2 = "-"
+    ai_tp3 = "-"
+
+    ai_prob1 = "-"
+    ai_prob2 = "-"
+    ai_prob3 = "-"
 
 # ==================================================
 # SIGNAL CARD
@@ -796,7 +858,18 @@ AI TP3 : {ai_tp3}
 </div>
 
 <div class="box">
-도달확률 : {ai_probability}%
+AI TP1 : {ai_tp1}
+(도달확률 {ai_prob1}%)
+</div>
+
+<div class="box">
+AI TP2 : {ai_tp2}
+(도달확률 {ai_prob2}%)
+</div>
+
+<div class="box">
+AI TP3 : {ai_tp3}
+(도달확률 {ai_prob3}%)
 </div>
 
 </div>

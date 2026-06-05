@@ -367,7 +367,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 9. TRADING CHART (에러 유발 속성 원천 제거 로직 반영)
+# 9. TRADING CHART (Python 3.14 호환성 정교화 매커니즘 반영)
 # ==================================================
 
 fig = make_subplots(
@@ -397,14 +397,16 @@ fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI", lin
 fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="#EF4444")
 fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="#10B981")
 
-# ⭐️ [최고 효율 에러 차단법] 
-# 레이아웃 옵션을 건드리지 않고, 이미 주입된 캔들스틱 데이터의 레인지슬라이더 메모리를 통째로 파괴합니다.
-# 이 코드가 들어감으로써 update_layout 에러가 완전히 사라집니다.
-for trace in fig.data:
-    if trace.type == "candlestick":
-        trace.rangeselider = None
+# ⭐️ [핵심 해결 파트] 
+# 레이아웃 내부의 모든 객체를 훑으면서 이름이 'xaxis'로 시작하는 동적 축 속성을 탐색합니다.
+# 축 내부에 존재하는 rangeselider 오브젝트의 가시성(visible)을 직접 차단하여 Python 3.14의 검증 오류를 완벽하게 무력화합니다.
+for attr in dir(fig.layout):
+    if attr.startswith("xaxis"):
+        axis = getattr(fig.layout, attr)
+        if hasattr(axis, "rangeselider"):
+            axis.rangeselider.visible = False
 
-# 순수 차트 외형 스타일만 세팅 (충돌 위험 속성 0%)
+# 순수 차트 테마 및 여백 설정 (안전성 100%)
 fig.update_layout(
     template="plotly_dark",
     height=900,

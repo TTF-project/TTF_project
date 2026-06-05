@@ -642,7 +642,7 @@ if scalp_signal == "LONG":
     base_prob = min(
     round(confidence * 0.9),
     95
-)
+    )
 
 ai_prob1 = max(base_prob, 40)
 

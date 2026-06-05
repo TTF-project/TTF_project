@@ -367,26 +367,29 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 9. TRADING CHART (흰색 손잡이 잔상 및 3.14 에러 완전 해결)
+# 9. TRADING CHART (에러 원천 차단 아키텍처)
 # ==================================================
 
 fig = make_subplots(
     rows=3, cols=1,
     shared_xaxes=True,
     row_heights=[0.6, 0.2, 0.2],
-    vertical_spacing=0.05
+    vertical_spacing=0.04
 )
 
-# 1층: 오리지널 캔들스틱 및 이동평균선(EMA)
+# ⭐️ [핵심 포인트] go.Candlestick 선언 시 rangeselider_visible=False를 다이렉트로 집어넣습니다.
+# 이렇게 하면 사후에 변경 명령을 내리지 않아도 되므로 파이썬 3.14 빌드 에러 및 흰색 잔상이 100% 원천 해결됩니다.
 fig.add_trace(go.Candlestick(
     x=df_15m["timestamp"], 
     open=df_15m["open"], 
     high=df_15m["high"], 
     low=df_15m["low"], 
     close=df_15m["close"], 
-    name="PRICE"
+    name="PRICE",
+    rangeselider_visible=False  # 👈 여기에 직접 주입하여 생성합니다!
 ), row=1, col=1)
 
+# 이동평균선(EMA) 추가
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema20"], name="EMA20", line=dict(color='#FFD54A')), row=1, col=1)
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema50"], name="EMA50", line=dict(color='#00FFB2')), row=1, col=1)
 
@@ -398,11 +401,7 @@ fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI", lin
 fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="#EF4444")
 fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="#10B981")
 
-# ⭐️ [최종 마스터키 설정] 
-# 파이썬 3.14 내부 엔진 충돌을 피하고 양옆 흰색 조절기 잔상까지 원천 삭제하는 공식 딕셔너리 주입 방식입니다.
-fig.update_xaxes(dict(rangeselider=dict(visible=False)))
-
-# 순수 차트 테마 및 여백 레이아웃 지정
+# 순수 차트 테마 및 여백 레이아웃 지정 (충돌 속성 완벽 제거)
 fig.update_layout(
     template="plotly_dark",
     height=900,

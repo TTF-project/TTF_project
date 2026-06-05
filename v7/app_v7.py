@@ -579,6 +579,63 @@ else:
     st.session_state.last_signal = ""
 
 # ==================================================
+# AI TARGET
+# ==================================================
+
+if scalp_signal == "LONG":
+
+    recent_high = df_15m["high"].tail(50).max()
+
+    atr_value = df_15m["atr"].iloc[-1]
+
+    ai_tp1 = round(recent_high, 4)
+
+    ai_tp2 = round(
+        recent_high + atr_value,
+        4
+    )
+
+    ai_tp3 = round(
+        recent_high + atr_value * 2,
+        4
+    )
+
+    ai_probability = min(
+        round(confidence * 0.8),
+        95
+    )
+
+elif scalp_signal == "SHORT":
+
+    recent_low = df_15m["low"].tail(50).min()
+
+    atr_value = df_15m["atr"].iloc[-1]
+
+    ai_tp1 = round(recent_low, 4)
+
+    ai_tp2 = round(
+        recent_low - atr_value,
+        4
+    )
+
+    ai_tp3 = round(
+        recent_low - atr_value * 2,
+        4
+    )
+
+    ai_probability = min(
+        round(confidence * 0.8),
+        95
+    )
+
+else:
+
+    ai_tp1 = "-"
+    ai_tp2 = "-"
+    ai_tp3 = "-"
+    ai_probability = "-"
+
+# ==================================================
 # SIGNAL COLOR
 # ==================================================
 
@@ -628,6 +685,22 @@ st.markdown(f"""
 
 <div class="info">
 🚀 TP3 (+2%) : {tp3}
+</div>
+
+<div class="info">
+🤖 AI TP1 : {ai_tp1}
+</div>
+
+<div class="info">
+🤖 AI TP2 : {ai_tp2}
+</div>
+
+<div class="info">
+🤖 AI TP3 : {ai_tp3}
+</div>
+
+<div class="info">
+🎯 AI 도달확률 : {ai_probability}%
 </div>
 
 <div class="info">
@@ -692,6 +765,38 @@ st.markdown(f"""
 
 <div class="box">
 4시간 : {div_4h}
+</div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# ==================================================
+# AI TARGET CARD
+# ==================================================
+
+st.markdown(f"""
+
+<div class="card">
+
+<div class="card-title">
+🤖 AI 목표가 분석
+</div>
+
+<div class="box">
+AI TP1 : {ai_tp1}
+</div>
+
+<div class="box">
+AI TP2 : {ai_tp2}
+</div>
+
+<div class="box">
+AI TP3 : {ai_tp3}
+</div>
+
+<div class="box">
+도달확률 : {ai_probability}%
 </div>
 
 </div>

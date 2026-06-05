@@ -471,13 +471,32 @@ if scalp_signal == "LONG":
 
 elif scalp_signal == "SHORT":
 
-    entry = current_price
+    recent_low = df_15m["low"].tail(50).min()
 
-    stop = round(entry * 1.007, 4)
+    atr_value = df_15m["atr"].iloc[-1]
 
-    tp1 = round(entry * 0.99, 4)
-    tp2 = round(entry * 0.985, 4)
-    tp3 = round(entry * 0.98, 4)
+    ai_tp1 = round(recent_low, 4)
+
+    ai_tp2 = round(
+        recent_low - atr_value,
+        4
+    )
+
+    ai_tp3 = round(
+        recent_low - atr_value * 2,
+        4
+    )
+
+    base_prob = min(
+        round(confidence * 0.9),
+        95
+    )
+
+    ai_prob1 = max(base_prob, 40)
+
+    ai_prob2 = max(base_prob - 15, 25)
+
+    ai_prob3 = max(base_prob - 30, 10)
 
 
 else:

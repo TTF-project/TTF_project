@@ -14,7 +14,7 @@ from ta.volatility import AverageTrueRange
 from datetime import datetime
 
 # ==================================================
-# 1. PAGE CONFIG & CSS (원본 UI 디자인 100% 복원)
+# 1. PAGE CONFIG & CSS (원본 UI 디자인 100% 유지)
 # ==================================================
 
 st.set_page_config(
@@ -226,7 +226,7 @@ elif trend_4h == "SHORT" and trend_1h == "SHORT" and trend_15m == "SHORT":
 current_price = round(df_3m["close"].iloc[-1], 4)
 
 # ==================================================
-# 6. VARIABLE INITIALIZATION (ValueError 완전 대응 안전장치)
+# 6. VARIABLE INITIALIZATION
 # ==================================================
 
 if scalp_signal == "LONG":
@@ -236,7 +236,6 @@ elif scalp_signal == "SHORT":
 else:
     signal_class = "neutral"
 
-# 데이터는 내부적으로 항상 연산 가능한 '숫자 형식'을 유지합니다.
 entry = current_price
 stop = 0.0
 tp1 = tp2 = tp3 = 0.0
@@ -280,14 +279,13 @@ elif scalp_signal == "SHORT":
     ai_prob3 = max(base_prob - 30, 10)
     ai_probability = base_prob
 
-# ⭐️ WAIT 상태일 때 대시(-) 문자열로 안전하게 치환해 출력해 주는 UI 바인딩 함수
 def display_val(val, is_percentage=False):
     if scalp_signal == "WAIT":
         return "-"
     return f"{val}%" if is_percentage else str(val)
 
 # ==================================================
-# 7. TELEGRAM ALERT LOGIC (원본 로직 복원)
+# 7. TELEGRAM ALERT LOGIC
 # ==================================================
 
 if scalp_signal == "LONG":
@@ -304,10 +302,9 @@ else:
     st.session_state.last_signal = ""
 
 # ==================================================
-# 8. UI DASHBOARD DISPLAY (오리지널 카드 5종 무삭제 복원)
+# 8. UI DASHBOARD DISPLAY
 # ==================================================
 
-# 1) 메인 시그널 카드
 st.markdown(f"""
 <div class="card">
 <div class="{signal_class}">
@@ -327,7 +324,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 2) 멀티 타임프레임 분석 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">📊 멀티 타임프레임 분석</div>
@@ -338,7 +334,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 3) RSI 다이버전스 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">⚡ RSI 다이버전스</div>
@@ -348,7 +343,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 4) AI 목표가 분석 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">🤖 AI 목표가 분석 (구조 + ATR)</div>
@@ -358,7 +352,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 5) 스캘핑 상태 세부 카드
 st.markdown(f"""
 <div class="card">
 <div class="card-title">⚡ 스캘핑 상태</div>
@@ -369,7 +362,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 9. TRADING CHART (3분할 오리지널 차트 레이아웃 + Subplot 에러 완벽 수정)
+# 9. TRADING CHART (Python 3.14 호환성 에러 우회 적용)
 # ==================================================
 
 fig = make_subplots(
@@ -378,16 +371,19 @@ fig = make_subplots(
     row_heights=[0.6, 0.2, 0.2]
 )
 
-# 1층: 캔들스틱 및 이동평균선(EMA)
+# ⭐️ [핵심 수정] Candlestick 내부 옵션으로 xaxis_rangeselider_visible 설정을 다이렉트로 전달합니다.
+# 이렇게 하면 fig.update_xaxes를 따로 부르지 않아 파이썬 3.14 내부 엔진 충돌이 원천 차단됩니다.
 fig.add_trace(go.Candlestick(
     x=df_15m["timestamp"], 
     open=df_15m["open"], 
     high=df_15m["high"], 
     low=df_15m["low"], 
     close=df_15m["close"], 
-    name="PRICE"
+    name="PRICE",
+    xaxis=dict(rangeselider=dict(visible=False))  # 👈 이곳에서 슬라이더를 바로 비활성화
 ), row=1, col=1)
 
+# 이동평균선(EMA) 추가
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema20"], name="EMA20", line=dict(color='#FFD54A')), row=1, col=1)
 fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["ema50"], name="EMA50", line=dict(color='#00FFB2')), row=1, col=1)
 
@@ -399,10 +395,7 @@ fig.add_trace(go.Scatter(x=df_15m["timestamp"], y=df_15m["rsi"], name="RSI", lin
 fig.add_hline(y=70, row=3, col=1, line_dash="dash", line_color="#EF4444")
 fig.add_hline(y=30, row=3, col=1, line_dash="dash", line_color="#10B981")
 
-# ⭐️ [가장 중요] 멀티 행 서브플롯에서 스크롤 레인지 슬라이더를 끄는 정확한 문법 적용
-fig.update_xaxes(rangeselider_visible=False, row=1, col=1)
-
-# 차트 종합 다크 스타일 레이아웃 반영
+# 차트 종합 다크 스타일 레이아웃 반영 (에러를 내는 외부 업데이트 구문 없음)
 fig.update_layout(
     template="plotly_dark",
     height=900,
